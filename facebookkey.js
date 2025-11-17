@@ -2260,11 +2260,17 @@ async function extractCommentsFromDialog(page, postUrl, postAuthor) {
                 return false;
             });
 
-            // ✅ Respect MAX_COMMENTS_PER_POST limit when adding new comments
+            // ✅ Respect MAX_COMMENTS_PER_POST limit when adding new comments (efficient approach)
             const remainingSlots = CONFIG.MAX_COMMENTS_PER_POST - comments.length;
             const commentsToAdd = newCommentsOnly.slice(0, remainingSlots);
             comments.push(...commentsToAdd);
             const currentCount = comments.length;
+
+            // ✅ Break early if we've reached the limit
+            if (currentCount >= CONFIG.MAX_COMMENTS_PER_POST) {
+                console.log(`         ✅ Reached MAX_COMMENTS_PER_POST (${CONFIG.MAX_COMMENTS_PER_POST}), stopping...`);
+                break;
+            }
 
             if (currentCount === previousCount) {
                 sameCountTimes++;
