@@ -125,10 +125,87 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 15px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            transition: all 0.3s ease;
         }
 
         .dark-mode .filters-section {
             background: var(--card-dark);
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            margin-top: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .dark-mode .autocomplete-list {
+            background: #333;
+            border-color: var(--primary);
+        }
+
+        .autocomplete-list.show {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .autocomplete-item:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .dark-mode .autocomplete-item:hover {
+            background: var(--primary);
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 999;
+            transition: all 0.3s ease;
+        }
+
+        .back-to-top.show {
+            display: flex;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
         }
 
         .filter-group {
@@ -541,7 +618,10 @@
         <div class="filters-section">
             <div class="filter-group">
                 <label><i class="fas fa-search"></i> Search</label>
-                <input type="text" id="searchInput" placeholder="Search author or text..." onkeyup="applyFilters()">
+                <div class="search-wrapper">
+                    <input type="text" id="searchInput" placeholder="Search author or text..." onkeyup="handleSearch()" autocomplete="off">
+                    <div class="autocomplete-list" id="autocompleteList"></div>
+                </div>
             </div>
             <div class="filter-group">
                 <label><i class="fas fa-calendar"></i> Date From</label>
@@ -645,6 +725,10 @@
         <span id="statusText">Connecting to API...</span>
     </div>
 
+    <button class="back-to-top" id="backToTop" onclick="scrollToTop()">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
     <div class="toast" id="toast"></div>
 
     <script>
@@ -653,6 +737,79 @@
         let allPosts = [];
         let allComments = [];
         let allAuthors = [];
+        let filteredData = [];
+
+        // Scroll handler for back-to-top button
+        window.addEventListener('scroll', () => {
+            const backToTop = document.getElementById('backToTop');
+            if (window.pageYOffset > 300) {
+                backToTop.classList.add('show');
+            } else {
+                backToTop.classList.remove('show');
+            }
+        });
+
+        // Scroll to top smoothly
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Handle search with autocomplete
+        function handleSearch() {
+            const input = document.getElementById('searchInput');
+            const value = input.value.toLowerCase();
+            const autocompleteList = document.getElementById('autocompleteList');
+
+            if (value.length < 2) {
+                autocompleteList.classList.remove('show');
+                applyFilters();
+                return;
+            }
+
+            // Get unique authors and texts for autocomplete
+            const suggestions = new Set();
+            allPosts.forEach(post => {
+                if (post.author && post.author.toLowerCase().includes(value)) {
+                    suggestions.add(post.author);
+                }
+                if (post.text_preview && post.text_preview.toLowerCase().includes(value)) {
+                    const words = post.text_preview.split(' ').filter(w =>
+                        w.toLowerCase().includes(value) && w.length > 3
+                    );
+                    words.forEach(w => suggestions.add(w));
+                }
+            });
+
+            const suggestionArray = Array.from(suggestions).slice(0, 10);
+
+            if (suggestionArray.length > 0) {
+                autocompleteList.innerHTML = suggestionArray.map(s =>
+                    `<div class="autocomplete-item" onclick="selectSuggestion('${s.replace(/'/g, "\\'")}')">${s}</div>`
+                ).join('');
+                autocompleteList.classList.add('show');
+            } else {
+                autocompleteList.classList.remove('show');
+            }
+
+            applyFilters();
+        }
+
+        // Select autocomplete suggestion
+        function selectSuggestion(value) {
+            document.getElementById('searchInput').value = value;
+            document.getElementById('autocompleteList').classList.remove('show');
+            applyFilters();
+        }
+
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-wrapper')) {
+                document.getElementById('autocompleteList').classList.remove('show');
+            }
+        });
 
         // Toast notification
         function showToast(message, duration = 3000) {
@@ -1128,7 +1285,7 @@
         }
 
         // Apply filters
-        function applyFilters() {
+        async function applyFilters() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
@@ -1151,8 +1308,77 @@
                 return true;
             });
 
+            filteredData = filtered;
             renderPosts(filtered);
+
+            // Update charts with filtered data
+            await updateChartsWithFilteredData(filtered);
+
             showToast(`Showing ${filtered.length} posts`);
+        }
+
+        // Update charts based on filtered data
+        async function updateChartsWithFilteredData(data) {
+            if (data.length === 0) return;
+
+            // Calculate stats from filtered data
+            const authorStats = {};
+            data.forEach(post => {
+                const author = post.author || 'Unknown';
+                if (!authorStats[author]) {
+                    authorStats[author] = {
+                        total_posts: 0,
+                        total_reactions: 0,
+                        total_comments: 0,
+                        total_shares: 0
+                    };
+                }
+                authorStats[author].total_posts++;
+                authorStats[author].total_reactions += post.reactions || 0;
+                authorStats[author].total_comments += post.comments || 0;
+                authorStats[author].total_shares += post.shares || 0;
+            });
+
+            const authorArray = Object.keys(authorStats).map(author => ({
+                author,
+                ...authorStats[author]
+            })).sort((a, b) => b.total_reactions - a.total_reactions);
+
+            // Update bar chart
+            if (charts.authorsBar) {
+                const topAuthors = authorArray.slice(0, 10);
+                charts.authorsBar.data.labels = topAuthors.map(a => a.author);
+                charts.authorsBar.data.datasets[0].data = topAuthors.map(a => a.total_reactions);
+                charts.authorsBar.update();
+            }
+
+            // Update pie chart
+            if (charts.postsPie) {
+                const topAuthors = authorArray.slice(0, 5);
+                charts.postsPie.data.labels = topAuthors.map(a => a.author);
+                charts.postsPie.data.datasets[0].data = topAuthors.map(a => a.total_posts);
+                charts.postsPie.update();
+            }
+
+            // Update donut chart
+            if (charts.engagementDonut) {
+                const totalReactions = data.reduce((sum, p) => sum + (p.reactions || 0), 0);
+                const totalComments = data.reduce((sum, p) => sum + (p.comments || 0), 0);
+                const totalShares = data.reduce((sum, p) => sum + (p.shares || 0), 0);
+
+                charts.engagementDonut.data.datasets[0].data = [totalReactions, totalComments, totalShares];
+                charts.engagementDonut.update();
+            }
+
+            // Update stacked bar chart
+            if (charts.postsStacked) {
+                const topPosts = data.slice(0, 10);
+                charts.postsStacked.data.labels = topPosts.map(p => (p.author || 'Unknown').substring(0, 20) + '...');
+                charts.postsStacked.data.datasets[0].data = topPosts.map(p => p.reactions || 0);
+                charts.postsStacked.data.datasets[1].data = topPosts.map(p => p.comments || 0);
+                charts.postsStacked.data.datasets[2].data = topPosts.map(p => p.shares || 0);
+                charts.postsStacked.update();
+            }
         }
 
         // Export to CSV
