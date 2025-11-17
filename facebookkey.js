@@ -97,7 +97,7 @@ const CONFIG = {
     // ✅ DATABASE AUTO-SAVE - Save to PostgreSQL real-time
     AUTO_SAVE_TO_DATABASE: true, // Enable auto-save to database (in addition to CSV)
     DB_HOST: process.env.DB_HOST || 'localhost',
-    DB_PORT: process.env.DB_PORT || 5433,
+    DB_PORT: parseInt(process.env.DB_PORT) || 5432,  // ✅ FIXED: Changed from 5433 to 5432
     DB_USER: process.env.DB_USER || 'fbadmin',
     DB_PASSWORD: process.env.DB_PASSWORD || 'fbpass123',
     DB_NAME: process.env.DB_NAME || 'facebook_data',
