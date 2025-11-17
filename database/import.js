@@ -52,22 +52,24 @@ async function importPostsCSV(filePath) {
                             continue;
                         }
 
-                        // Insert new post
+                        // Insert new post (CSV format)
                         await pool.query(`
                             INSERT INTO posts (
-                                author, author_url, text, timestamp, timestamp_unix,
+                                author, author_url, author_followers, text, timestamp, timestamp_iso, timestamp_unix,
                                 reactions, comments, shares, views,
-                                post_url, share_url, image_url, video_url,
+                                post_url, share_url, image_url, video_url, image_source, video_source,
                                 has_image, has_video, query_used, filter_year,
                                 location, scraped_at
-                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
                         `, [
                             post.author || null,
                             post.author_url || null,
-                            post.text || null,
+                            parseInt(post.author_followers) || 0,
+                            post.text || post.content_text || null,
                             post.timestamp || null,
+                            post.timestamp_iso || null,
                             parseInt(post.timestamp_unix) || 0,
-                            parseInt(post.reactions) || 0,
+                            parseInt(post.reactions || post.reactions_total) || 0,
                             parseInt(post.comments) || 0,
                             parseInt(post.shares) || 0,
                             parseInt(post.views) || 0,
@@ -75,8 +77,10 @@ async function importPostsCSV(filePath) {
                             post.share_url || null,
                             post.image_url || null,
                             post.video_url || null,
-                            post.has_image === 'true' || post.has_image === '1',
-                            post.has_video === 'true' || post.has_video === '1',
+                            post.image_source || null,
+                            post.video_source || null,
+                            post.has_image === 'true' || post.has_image === '1' || post.has_image === true,
+                            post.has_video === 'true' || post.has_video === '1' || post.has_video === true,
                             post.query_used || null,
                             post.filter_year || null,
                             post.location || null,
@@ -192,19 +196,21 @@ async function importPostsJSON(filePath) {
 
             await pool.query(`
                 INSERT INTO posts (
-                    author, author_url, text, timestamp, timestamp_unix,
+                    author, author_url, author_followers, text, timestamp, timestamp_iso, timestamp_unix,
                     reactions, comments, shares, views,
-                    post_url, share_url, image_url, video_url,
+                    post_url, share_url, image_url, video_url, image_source, video_source,
                     has_image, has_video, query_used, filter_year,
                     location, scraped_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
             `, [
                 post.author || null,
                 post.author_url || null,
-                post.text || null,
+                post.author_followers || 0,
+                post.text || post.content_text || null,
                 post.timestamp || null,
+                post.timestamp_iso || null,
                 post.timestamp_unix || 0,
-                post.reactions || 0,
+                post.reactions || post.reactions_total || 0,
                 post.comments || 0,
                 post.shares || 0,
                 post.views || 0,
@@ -212,6 +218,8 @@ async function importPostsJSON(filePath) {
                 post.share_url || null,
                 post.image_url || null,
                 post.video_url || null,
+                post.image_source || null,
+                post.video_source || null,
                 post.has_image || false,
                 post.has_video || false,
                 post.query_used || null,
