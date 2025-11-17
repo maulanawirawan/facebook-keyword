@@ -7374,7 +7374,67 @@ async function main() {
         console.log(`😴 Siklus selesai. Jeda ${CONFIG.JEDA_ANTAR_SIKLUS_MENIT} menit...`);
         console.log(`   Stats: ${stats.totalScraped} total, ${stats.cycleCount} cycles`);
         console.log(`${"─".repeat(70)}\n`);
-        
+
+        // ✅ AUTO-IMPORT ke Database
+        try {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📥 AUTO-IMPORT: Triggering database import...');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+            const http = require('http');
+
+            const importRequest = http.request({
+                hostname: 'localhost',
+                port: 3002,
+                path: '/api/import',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }, (res) => {
+                let data = '';
+
+                res.on('data', (chunk) => {
+                    data += chunk;
+                    // Print streaming response
+                    try {
+                        const lines = data.split('\n').filter(l => l.trim());
+                        lines.forEach(line => {
+                            try {
+                                const json = JSON.parse(line);
+                                if (json.status === 'started') {
+                                    console.log('   📤 Import started...');
+                                } else if (json.status === 'completed') {
+                                    console.log('   ✅ Import completed successfully!');
+                                } else if (json.status === 'error') {
+                                    console.log(`   ❌ Import error: ${json.message}`);
+                                }
+                            } catch (e) {}
+                        });
+                    } catch (e) {}
+                });
+
+                res.on('end', () => {
+                    console.log('\n📊 Dashboard will auto-refresh in 30 seconds');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+                });
+            });
+
+            importRequest.on('error', (error) => {
+                console.log(`   ⚠️  Auto-import failed: ${error.message}`);
+                console.log(`   💡 TIP: Make sure Docker containers are running (docker-compose up -d)`);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+            });
+
+            importRequest.end();
+
+            // Wait for import to complete (max 10 seconds)
+            await new Promise(resolve => setTimeout(resolve, 10000));
+
+        } catch (err) {
+            console.log(`   ⚠️  Auto-import error: ${err.message}\n`);
+        }
+
         await new Promise(resolve => setTimeout(resolve, jedaSiklus));
     }
 }  // ✅ Closing bracket main() tetap ada
