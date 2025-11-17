@@ -120,6 +120,7 @@ SELECT
     SUM(reactions) as total_reactions,
     SUM(comments) as total_comments,
     SUM(shares) as total_shares,
+    SUM(views) as total_views,
     ROUND(AVG(reactions), 2) as avg_reactions
 FROM posts
 WHERE scraped_at IS NOT NULL
@@ -210,6 +211,8 @@ BEGIN
     SELECT 'Total Reactions'::VARCHAR, COALESCE(SUM(reactions), 0)::BIGINT FROM posts
     UNION ALL
     SELECT 'Total Shares'::VARCHAR, COALESCE(SUM(shares), 0)::BIGINT FROM posts
+    UNION ALL
+    SELECT 'Total Views'::VARCHAR, COALESCE(SUM(views), 0)::BIGINT FROM posts
     UNION ALL
     SELECT 'Unique Authors'::VARCHAR, COUNT(DISTINCT author)::BIGINT FROM posts WHERE author IS NOT NULL
     UNION ALL
