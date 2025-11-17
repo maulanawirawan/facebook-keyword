@@ -799,18 +799,33 @@
 
         // Enhanced color palette (vibrant and coordinated with purple background)
         const CHART_COLORS = [
-            'rgba(255, 107, 157, 0.85)',  // Pink
-            'rgba(196, 69, 105, 0.85)',   // Deep Pink
-            'rgba(255, 165, 2, 0.85)',    // Orange
-            'rgba(255, 99, 72, 0.85)',    // Coral
-            'rgba(84, 160, 255, 0.85)',   // Blue
-            'rgba(95, 39, 205, 0.85)',    // Purple
-            'rgba(0, 210, 211, 0.85)',    // Cyan
-            'rgba(29, 209, 161, 0.85)',   // Teal
-            'rgba(254, 202, 87, 0.85)',   // Yellow
-            'rgba(72, 219, 251, 0.85)',   // Light Blue
-            'rgba(255, 159, 243, 0.85)',  // Light Pink
-            'rgba(116, 185, 255, 0.85)'   // Sky Blue
+            'rgba(255, 107, 157, 0.9)',  // Pink
+            'rgba(196, 69, 105, 0.9)',   // Deep Pink
+            'rgba(255, 165, 2, 0.9)',    // Orange
+            'rgba(255, 99, 72, 0.9)',    // Coral
+            'rgba(84, 160, 255, 0.9)',   // Blue
+            'rgba(95, 39, 205, 0.9)',    // Purple
+            'rgba(0, 210, 211, 0.9)',    // Cyan
+            'rgba(29, 209, 161, 0.9)',   // Teal
+            'rgba(254, 202, 87, 0.9)',   // Yellow
+            'rgba(72, 219, 251, 0.9)',   // Light Blue
+            'rgba(255, 159, 243, 0.9)',  // Light Pink
+            'rgba(116, 185, 255, 0.9)'   // Sky Blue
+        ];
+
+        const CHART_BORDER_COLORS = [
+            'rgba(255, 107, 157, 1)',
+            'rgba(196, 69, 105, 1)',
+            'rgba(255, 165, 2, 1)',
+            'rgba(255, 99, 72, 1)',
+            'rgba(84, 160, 255, 1)',
+            'rgba(95, 39, 205, 1)',
+            'rgba(0, 210, 211, 1)',
+            'rgba(29, 209, 161, 1)',
+            'rgba(254, 202, 87, 1)',
+            'rgba(72, 219, 251, 1)',
+            'rgba(255, 159, 243, 1)',
+            'rgba(116, 185, 255, 1)'
         ];
 
         // Scroll handler
@@ -996,38 +1011,75 @@
         async function loadWordCloud() {
             try {
                 const response = await fetch(`${API_URL}/api/analytics/wordcloud?limit=100`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
                 const data = await response.json();
+                console.log('Word cloud data:', data);
+
+                if (!data || data.length === 0) {
+                    document.getElementById('wordCloudContainer').innerHTML = '<p style="text-align:center;padding:80px;color:#999;font-size:1.1em;"><i class="fas fa-cloud" style="font-size:2em;display:block;margin-bottom:10px;opacity:0.3;"></i>No keywords available yet<br><small>Data will appear after scraping posts</small></p>';
+                    return;
+                }
+
                 wordCloudData = data;
                 createWordCloud(data);
             } catch (error) {
                 console.error('Failed to load word cloud:', error);
-                document.getElementById('wordCloudContainer').innerHTML = '<p style="text-align:center;padding:40px;color:#999;">Word cloud data not available</p>';
+                document.getElementById('wordCloudContainer').innerHTML = '<p style="text-align:center;padding:80px;color:#999;font-size:1.1em;"><i class="fas fa-exclamation-triangle" style="font-size:2em;display:block;margin-bottom:10px;opacity:0.5;color:#f39c12;"></i>Could not connect to API<br><small>Make sure Docker containers are running</small></p>';
             }
         }
 
         function createWordCloud(data) {
             if (!data || data.length === 0) {
-                document.getElementById('wordCloudContainer').innerHTML = '<p style="text-align:center;padding:40px;color:#999;">No keywords found</p>';
+                document.getElementById('wordCloudContainer').innerHTML = '<p style="text-align:center;padding:80px;color:#999;font-size:1.1em;"><i class="fas fa-cloud" style="font-size:2em;display:block;margin-bottom:10px;opacity:0.3;"></i>No keywords found</p>';
                 return;
             }
 
-            const isDark = document.body.classList.contains('dark-mode');
-            const list = data.map(item => [item.word, item.count * 3]); // Scale up for better visibility
+            try {
+                const container = document.getElementById('wordCloudContainer');
+                container.innerHTML = ''; // Clear previous content
 
-            WordCloud(document.getElementById('wordCloudContainer'), {
-                list: list,
-                gridSize: 8,
-                weightFactor: 2,
-                fontFamily: 'Arial, sans-serif',
-                color: function() {
-                    return CHART_COLORS[Math.floor(Math.random() * CHART_COLORS.length)];
-                },
-                backgroundColor: isDark ? '#16213e' : '#ffffff',
-                rotateRatio: 0.3,
-                minRotation: -Math.PI / 4,
-                maxRotation: Math.PI / 4,
-                shuffle: true
-            });
+                const isDark = document.body.classList.contains('dark-mode');
+                const list = data.map(item => [item.word, item.count * 5]); // Scale up more for visibility
+
+                if (typeof WordCloud !== 'function') {
+                    console.error('WordCloud library not loaded');
+                    container.innerHTML = '<p style="text-align:center;padding:80px;color:#e74c3c;font-size:1.1em;">WordCloud library failed to load</p>';
+                    return;
+                }
+
+                WordCloud(container, {
+                    list: list,
+                    gridSize: 10,
+                    weightFactor: 3,
+                    fontFamily: 'Impact, Arial Black, sans-serif',
+                    fontWeight: 'bold',
+                    color: function() {
+                        // Use brighter colors for word cloud
+                        const colors = [
+                            '#FF6B9D', '#C44569', '#FFA502', '#FF6348',
+                            '#54A0FF', '#5F27CD', '#00D2D3', '#1DD1A1',
+                            '#FECA57', '#48DBFB', '#FF9FF3', '#74B9FF'
+                        ];
+                        return colors[Math.floor(Math.random() * colors.length)];
+                    },
+                    backgroundColor: isDark ? '#16213e' : '#ffffff',
+                    rotateRatio: 0.4,
+                    minRotation: -Math.PI / 6,
+                    maxRotation: Math.PI / 6,
+                    shuffle: true,
+                    drawOutOfBound: false,
+                    shrinkToFit: true
+                });
+
+                console.log('Word cloud created successfully with', list.length, 'words');
+            } catch (error) {
+                console.error('Error creating word cloud:', error);
+                document.getElementById('wordCloudContainer').innerHTML = '<p style="text-align:center;padding:80px;color:#e74c3c;font-size:1.1em;">Failed to render word cloud</p>';
+            }
         }
 
         // Horizontal Bar Chart - Top Authors
@@ -1047,8 +1099,8 @@
                             label: 'Total Reactions',
                             data: data.map(a => a.total_reactions || 0),
                             backgroundColor: CHART_COLORS,
-                            borderColor: CHART_COLORS.map(c => c.replace('0.85', '1')),
-                            borderWidth: 2
+                            borderColor: CHART_BORDER_COLORS,
+                            borderWidth: 3
                         }]
                     },
                     options: {
@@ -1059,14 +1111,30 @@
                             legend: { display: false },
                             datalabels: {
                                 anchor: 'end',
-                                align: 'right',
+                                align: 'end',
+                                offset: 4,
                                 color: '#fff',
-                                font: { weight: 'bold', size: 11 },
-                                formatter: (value) => value.toLocaleString()
+                                font: { weight: 'bold', size: 14 },
+                                formatter: (value) => value > 0 ? value.toLocaleString() : '',
+                                textStrokeColor: 'rgba(0,0,0,0.5)',
+                                textStrokeWidth: 3
                             }
                         },
                         scales: {
-                            x: { beginAtZero: true }
+                            x: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(200,200,200,0.2)'
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: { size: 13 }
+                                }
+                            }
                         }
                     },
                     plugins: [ChartDataLabels]
@@ -1100,18 +1168,27 @@
                                 data.total_shares || 0
                             ],
                             backgroundColor: [CHART_COLORS[0], CHART_COLORS[4], CHART_COLORS[5]],
-                            borderWidth: 2
+                            borderColor: [CHART_BORDER_COLORS[0], CHART_BORDER_COLORS[4], CHART_BORDER_COLORS[5]],
+                            borderWidth: 3
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { position: 'right' },
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    font: { size: 13 },
+                                    padding: 12
+                                }
+                            },
                             datalabels: {
                                 color: '#fff',
-                                font: { weight: 'bold', size: 12 },
-                                formatter: (value) => value.toLocaleString()
+                                font: { weight: 'bold', size: 14 },
+                                formatter: (value) => value > 0 ? value.toLocaleString() : '',
+                                textStrokeColor: 'rgba(0,0,0,0.5)',
+                                textStrokeWidth: 3
                             },
                             centerText: {
                                 display: true,
@@ -1149,18 +1226,27 @@
                         datasets: [{
                             data: data.map(a => a.total_posts || 0),
                             backgroundColor: CHART_COLORS.slice(0, 6),
-                            borderWidth: 2
+                            borderColor: CHART_BORDER_COLORS.slice(0, 6),
+                            borderWidth: 3
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { position: 'right' },
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    font: { size: 13 },
+                                    padding: 12
+                                }
+                            },
                             datalabels: {
                                 color: '#fff',
-                                font: { weight: 'bold', size: 11 },
-                                formatter: (value) => value
+                                font: { weight: 'bold', size: 14 },
+                                formatter: (value) => value > 0 ? value : '',
+                                textStrokeColor: 'rgba(0,0,0,0.5)',
+                                textStrokeWidth: 3
                             },
                             centerText: {
                                 display: true,
@@ -1195,26 +1281,35 @@
                             {
                                 label: 'Reactions',
                                 data: data.map(d => d.total_reactions || 0),
-                                borderColor: CHART_COLORS[0],
-                                backgroundColor: CHART_COLORS[0].replace('0.85', '0.2'),
+                                borderColor: CHART_BORDER_COLORS[0],
+                                backgroundColor: CHART_COLORS[0].replace('0.9', '0.2'),
                                 tension: 0.4,
-                                borderWidth: 3
+                                borderWidth: 4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: true
                             },
                             {
                                 label: 'Comments',
                                 data: data.map(d => d.total_comments || 0),
-                                borderColor: CHART_COLORS[4],
-                                backgroundColor: CHART_COLORS[4].replace('0.85', '0.2'),
+                                borderColor: CHART_BORDER_COLORS[4],
+                                backgroundColor: CHART_COLORS[4].replace('0.9', '0.2'),
                                 tension: 0.4,
-                                borderWidth: 3
+                                borderWidth: 4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: true
                             },
                             {
                                 label: 'Shares',
                                 data: data.map(d => d.total_shares || 0),
-                                borderColor: CHART_COLORS[5],
-                                backgroundColor: CHART_COLORS[5].replace('0.85', '0.2'),
+                                borderColor: CHART_BORDER_COLORS[5],
+                                backgroundColor: CHART_COLORS[5].replace('0.9', '0.2'),
                                 tension: 0.4,
-                                borderWidth: 3
+                                borderWidth: 4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: true
                             }
                         ]
                     },
@@ -1222,11 +1317,30 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { position: 'top' },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    font: { size: 13 },
+                                    padding: 12
+                                }
+                            },
                             datalabels: { display: false }
                         },
                         scales: {
-                            y: { beginAtZero: true }
+                            x: {
+                                grid: {
+                                    color: 'rgba(200,200,200,0.2)'
+                                },
+                                ticks: {
+                                    font: { size: 11 }
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(200,200,200,0.2)'
+                                }
+                            }
                         }
                     }
                 });
@@ -1252,17 +1366,23 @@
                             {
                                 label: 'Reactions',
                                 data: data.map(p => p.reactions || 0),
-                                backgroundColor: CHART_COLORS[0]
+                                backgroundColor: CHART_COLORS[0],
+                                borderColor: CHART_BORDER_COLORS[0],
+                                borderWidth: 2
                             },
                             {
                                 label: 'Comments',
                                 data: data.map(p => p.comments || 0),
-                                backgroundColor: CHART_COLORS[4]
+                                backgroundColor: CHART_COLORS[4],
+                                borderColor: CHART_BORDER_COLORS[4],
+                                borderWidth: 2
                             },
                             {
                                 label: 'Shares',
                                 data: data.map(p => p.shares || 0),
-                                backgroundColor: CHART_COLORS[5]
+                                backgroundColor: CHART_COLORS[5],
+                                borderColor: CHART_BORDER_COLORS[5],
+                                borderWidth: 2
                             }
                         ]
                     },
@@ -1270,16 +1390,41 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { position: 'top' },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    font: { size: 13 },
+                                    padding: 12
+                                }
+                            },
                             datalabels: {
                                 color: '#fff',
-                                font: { weight: 'bold', size: 10 },
-                                formatter: (value) => value > 0 ? value.toLocaleString() : ''
+                                font: { weight: 'bold', size: 13 },
+                                formatter: (value) => {
+                                    // Only show if value is significant (> 50)
+                                    return value > 50 ? value.toLocaleString() : '';
+                                },
+                                textStrokeColor: 'rgba(0,0,0,0.5)',
+                                textStrokeWidth: 2
                             }
                         },
                         scales: {
-                            x: { stacked: true },
-                            y: { stacked: true, beginAtZero: true }
+                            x: {
+                                stacked: true,
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: { size: 12 }
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(200,200,200,0.2)'
+                                }
+                            }
                         }
                     },
                     plugins: [ChartDataLabels]
