@@ -3,9 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Analytics Dashboard - Enhanced</title>
+    <title>Facebook Analytics Dashboard - Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --bg-light: #f5f7fa;
+            --bg-dark: #1a1a2e;
+            --text-light: #333;
+            --text-dark: #eee;
+            --card-light: #ffffff;
+            --card-dark: #16213e;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,9 +26,14 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             min-height: 100vh;
             padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode {
+            background: var(--bg-dark);
         }
 
         .container {
@@ -25,23 +42,123 @@
         }
 
         header {
-            background: white;
+            background: var(--card-light);
             padding: 30px;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin-bottom: 30px;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
         }
 
-        h1 {
-            color: #333;
+        .dark-mode header {
+            background: var(--card-dark);
+            color: var(--text-dark);
+        }
+
+        .header-left h1 {
+            color: var(--text-light);
             font-size: 2.5em;
             margin-bottom: 10px;
+        }
+
+        .dark-mode .header-left h1 {
+            color: var(--text-dark);
         }
 
         .subtitle {
             color: #666;
             font-size: 1.1em;
+        }
+
+        .dark-mode .subtitle {
+            color: #aaa;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .dark-mode .btn-secondary {
+            background: #333;
+            color: #eee;
+        }
+
+        .filters-section {
+            background: var(--card-light);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .dark-mode .filters-section {
+            background: var(--card-dark);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .dark-mode .filter-group label {
+            color: var(--text-dark);
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .dark-mode .filter-group input,
+        .dark-mode .filter-group select {
+            background: #333;
+            color: #eee;
+            border-color: #444;
         }
 
         .stats-grid {
@@ -52,12 +169,16 @@
         }
 
         .stat-card {
-            background: white;
+            background: var(--card-light);
             padding: 25px;
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             text-align: center;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dark-mode .stat-card {
+            background: var(--card-dark);
         }
 
         .stat-card:hover {
@@ -68,7 +189,7 @@
         .stat-value {
             font-size: 2.5em;
             font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -82,6 +203,10 @@
             letter-spacing: 1px;
         }
 
+        .dark-mode .stat-label {
+            color: #aaa;
+        }
+
         .charts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
@@ -90,10 +215,14 @@
         }
 
         .chart-card {
-            background: white;
+            background: var(--card-light);
             padding: 30px;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .dark-mode .chart-card {
+            background: var(--card-dark);
         }
 
         .chart-card.full-width {
@@ -101,10 +230,14 @@
         }
 
         .chart-card h2 {
-            color: #333;
+            color: var(--text-light);
             margin-bottom: 20px;
             padding-bottom: 10px;
-            border-bottom: 3px solid #667eea;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .dark-mode .chart-card h2 {
+            color: var(--text-dark);
         }
 
         .chart-container {
@@ -117,16 +250,33 @@
         }
 
         .content-section {
-            background: white;
+            background: var(--card-light);
             padding: 30px;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin-bottom: 30px;
         }
 
+        .dark-mode .content-section {
+            background: var(--card-dark);
+        }
+
         h2 {
-            color: #333;
+            color: var(--text-light);
             margin-bottom: 20px;
+        }
+
+        .dark-mode h2 {
+            color: var(--text-dark);
+        }
+
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         table {
@@ -136,7 +286,7 @@
         }
 
         th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             padding: 15px;
             text-align: left;
@@ -148,24 +298,17 @@
             border-bottom: 1px solid #eee;
         }
 
+        .dark-mode td {
+            border-bottom-color: #444;
+            color: var(--text-dark);
+        }
+
         tr:hover {
             background: #f8f9fa;
         }
 
-        .loading {
-            text-align: center;
-            padding: 50px;
-            color: #666;
-            font-size: 1.2em;
-        }
-
-        .error {
-            background: #fee;
-            border: 2px solid #fcc;
-            color: #c33;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
+        .dark-mode tr:hover {
+            background: #222;
         }
 
         .post-text {
@@ -173,6 +316,23 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        .link {
+            color: var(--primary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+            color: var(--secondary);
+        }
+
+        .external-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .badge {
@@ -198,16 +358,41 @@
             color: #6c5ce7;
         }
 
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .dark-mode .loading {
+            color: #aaa;
+        }
+
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c33;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
         .api-status {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: white;
+            background: var(--card-light);
             padding: 15px 20px;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             font-size: 0.9em;
             z-index: 1000;
+        }
+
+        .dark-mode .api-status {
+            background: var(--card-dark);
+            color: var(--text-dark);
         }
 
         .status-dot {
@@ -240,6 +425,10 @@
             padding-bottom: 10px;
         }
 
+        .dark-mode .nav-tabs {
+            border-bottom-color: #444;
+        }
+
         .nav-tab {
             padding: 10px 20px;
             border: none;
@@ -250,22 +439,125 @@
             transition: all 0.3s ease;
         }
 
+        .dark-mode .nav-tab {
+            background: #333;
+            color: #eee;
+        }
+
         .nav-tab:hover {
             background: #e0e0e0;
         }
 
+        .dark-mode .nav-tab:hover {
+            background: #444;
+        }
+
         .nav-tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-light);
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .dark-mode .toast {
+            background: var(--card-dark);
+            color: var(--text-dark);
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .dark-mode .pagination button {
+            background: #333;
+            color: #eee;
+            border-color: #444;
+        }
+
+        .pagination button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📊 Facebook Analytics Dashboard</h1>
-            <p class="subtitle">Advanced data visualization and insights with interactive charts</p>
+            <div class="header-left">
+                <h1>📊 Facebook Analytics Dashboard Pro</h1>
+                <p class="subtitle">Advanced data visualization with interactive features</p>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button class="btn btn-primary" onclick="exportToCSV()">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+                <button class="btn btn-secondary" onclick="toggleDarkMode()">
+                    <i class="fas fa-moon"></i> Dark Mode
+                </button>
+            </div>
         </header>
+
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="filter-group">
+                <label><i class="fas fa-search"></i> Search</label>
+                <input type="text" id="searchInput" placeholder="Search author or text..." onkeyup="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-calendar"></i> Date From</label>
+                <input type="date" id="dateFrom" onchange="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-calendar"></i> Date To</label>
+                <input type="date" id="dateTo" onchange="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-user"></i> Author</label>
+                <select id="authorFilter" onchange="applyFilters()">
+                    <option value="">All Authors</option>
+                </select>
+            </div>
+        </div>
 
         <!-- Statistics Cards -->
         <div class="stats-grid" id="stats">
@@ -274,41 +566,36 @@
 
         <!-- Charts Section -->
         <div class="charts-grid">
-            <!-- Top Authors Bar Chart -->
             <div class="chart-card">
-                <h2>👥 Top Authors by Reactions</h2>
+                <h2><i class="fas fa-users"></i> Top Authors by Reactions</h2>
                 <div class="chart-container">
                     <canvas id="authorsBarChart"></canvas>
                 </div>
             </div>
 
-            <!-- Engagement Distribution Pie Chart -->
             <div class="chart-card">
-                <h2>📊 Posts Distribution by Author</h2>
+                <h2><i class="fas fa-chart-pie"></i> Posts Distribution by Author</h2>
                 <div class="chart-container small">
                     <canvas id="postsDistributionPie"></canvas>
                 </div>
             </div>
 
-            <!-- Engagement Types Donut Chart -->
             <div class="chart-card">
-                <h2>💬 Engagement Types Breakdown</h2>
+                <h2><i class="fas fa-chart-pie"></i> Engagement Types Breakdown</h2>
                 <div class="chart-container small">
                     <canvas id="engagementDonut"></canvas>
                 </div>
             </div>
 
-            <!-- Daily Trends Line Chart (Full Width) -->
             <div class="chart-card full-width">
-                <h2>📈 Daily Engagement Trends</h2>
+                <h2><i class="fas fa-chart-line"></i> Daily Engagement Trends</h2>
                 <div class="chart-container">
                     <canvas id="dailyTrendsLine"></canvas>
                 </div>
             </div>
 
-            <!-- Top Posts Stacked Bar Chart (Full Width) -->
             <div class="chart-card full-width">
-                <h2>🏆 Top Posts - Engagement Breakdown</h2>
+                <h2><i class="fas fa-trophy"></i> Top Posts - Engagement Breakdown</h2>
                 <div class="chart-container">
                     <canvas id="postsStackedBar"></canvas>
                 </div>
@@ -317,26 +604,35 @@
 
         <!-- Data Tables -->
         <div class="content-section">
-            <h2>📋 Detailed Data Tables</h2>
+            <h2><i class="fas fa-table"></i> Detailed Data Tables</h2>
             <div class="nav-tabs">
-                <button class="nav-tab active" onclick="showTab('posts')">Top Posts</button>
-                <button class="nav-tab" onclick="showTab('comments')">Recent Comments</button>
-                <button class="nav-tab" onclick="showTab('authors')">Top Authors</button>
+                <button class="nav-tab active" onclick="showTab('posts')"><i class="fas fa-newspaper"></i> Top Posts</button>
+                <button class="nav-tab" onclick="showTab('comments')"><i class="fas fa-comments"></i> Recent Comments</button>
+                <button class="nav-tab" onclick="showTab('authors')"><i class="fas fa-user-friends"></i> Top Authors</button>
             </div>
 
             <div id="tab-posts" class="tab-content">
+                <div class="table-controls">
+                    <span id="postsCount">Showing 0 posts</span>
+                </div>
                 <div id="posts">
                     <div class="loading">Loading posts...</div>
                 </div>
             </div>
 
             <div id="tab-comments" class="tab-content" style="display:none;">
+                <div class="table-controls">
+                    <span id="commentsCount">Showing 0 comments</span>
+                </div>
                 <div id="comments">
                     <div class="loading">Loading comments...</div>
                 </div>
             </div>
 
             <div id="tab-authors" class="tab-content" style="display:none;">
+                <div class="table-controls">
+                    <span id="authorsCount">Showing 0 authors</span>
+                </div>
                 <div id="authors">
                     <div class="loading">Loading authors...</div>
                 </div>
@@ -349,9 +645,35 @@
         <span id="statusText">Connecting to API...</span>
     </div>
 
+    <div class="toast" id="toast"></div>
+
     <script>
         const API_URL = 'http://localhost:3002';
         let charts = {};
+        let allPosts = [];
+        let allComments = [];
+        let allAuthors = [];
+
+        // Toast notification
+        function showToast(message, duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), duration);
+        }
+
+        // Dark mode toggle
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            showToast(isDark ? 'Dark mode enabled' : 'Light mode enabled');
+        }
+
+        // Load dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
 
         // Tab switching
         function showTab(tabName) {
@@ -417,7 +739,7 @@
             }
         }
 
-        // Create Top Authors Bar Chart
+        // Create charts (same as before)
         async function createAuthorsBarChart() {
             try {
                 const response = await fetch(`${API_URL}/api/authors/top?limit=10`);
@@ -459,7 +781,6 @@
             }
         }
 
-        // Create Posts Distribution Pie Chart
         async function createPostsDistributionPie() {
             try {
                 const response = await fetch(`${API_URL}/api/authors/top?limit=5`);
@@ -499,7 +820,6 @@
             }
         }
 
-        // Create Engagement Donut Chart
         async function createEngagementDonut() {
             try {
                 const response = await fetch(`${API_URL}/api/stats`);
@@ -541,7 +861,6 @@
             }
         }
 
-        // Create Daily Trends Line Chart
         async function createDailyTrendsLine() {
             try {
                 const response = await fetch(`${API_URL}/api/stats/daily?limit=30`);
@@ -598,7 +917,6 @@
             }
         }
 
-        // Create Posts Stacked Bar Chart
         async function createPostsStackedBar() {
             try {
                 const response = await fetch(`${API_URL}/api/posts/top/engagement?limit=10`);
@@ -653,57 +971,74 @@
             }
         }
 
-        // Load top posts
+        // Load posts with clickable links
         async function loadPosts() {
             try {
-                const response = await fetch(`${API_URL}/api/posts/top/engagement?limit=10`);
+                const response = await fetch(`${API_URL}/api/posts/top/engagement?limit=50`);
                 const data = await response.json();
+                allPosts = data;
 
                 if (data.length === 0) {
                     document.getElementById('posts').innerHTML = '<p>No posts found</p>';
                     return;
                 }
 
-                const postsHTML = `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Author</th>
-                                <th>Text</th>
-                                <th>Reactions</th>
-                                <th>Comments</th>
-                                <th>Shares</th>
-                                <th>Engagement</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${data.map(post => `
-                                <tr>
-                                    <td><strong>${post.author || 'Unknown'}</strong></td>
-                                    <td class="post-text">${post.text_preview || 'No text'}</td>
-                                    <td><span class="badge badge-reactions">${post.reactions?.toLocaleString() || 0}</span></td>
-                                    <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
-                                    <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
-                                    <td><strong>${post.engagement_score?.toLocaleString() || 0}</strong></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
+                // Populate author filter
+                const authors = [...new Set(data.map(p => p.author))].filter(a => a);
+                const authorFilter = document.getElementById('authorFilter');
+                authorFilter.innerHTML = '<option value="">All Authors</option>' +
+                    authors.map(a => `<option value="${a}">${a}</option>`).join('');
 
-                document.getElementById('posts').innerHTML = postsHTML;
+                renderPosts(data);
             } catch (error) {
                 document.getElementById('posts').innerHTML = '<div class="error">Failed to load posts</div>';
             }
         }
 
-        // Load recent comments
+        function renderPosts(data) {
+            const postsHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Author</th>
+                            <th>Text</th>
+                            <th>Reactions</th>
+                            <th>Comments</th>
+                            <th>Shares</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(post => `
+                            <tr>
+                                <td>
+                                    ${post.author ? `<a href="https://facebook.com/${post.author}" target="_blank" class="link external-link">${post.author} <i class="fas fa-external-link-alt"></i></a>` : 'Unknown'}
+                                </td>
+                                <td class="post-text">${post.text_preview || 'No text'}</td>
+                                <td><span class="badge badge-reactions">${post.reactions?.toLocaleString() || 0}</span></td>
+                                <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
+                                <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
+                                <td>
+                                    ${post.post_url ? `<a href="${post.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View Post</a>` : 'N/A'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            document.getElementById('posts').innerHTML = postsHTML;
+            document.getElementById('postsCount').textContent = `Showing ${data.length} posts`;
+        }
+
+        // Load comments
         async function loadComments() {
             try {
-                const response = await fetch(`${API_URL}/api/comments?limit=20`);
+                const response = await fetch(`${API_URL}/api/comments?limit=50`);
                 const data = await response.json();
+                allComments = data.data || [];
 
-                if (!data.data || data.data.length === 0) {
+                if (!allComments || allComments.length === 0) {
                     document.getElementById('comments').innerHTML = '<p>No comments found</p>';
                     return;
                 }
@@ -716,15 +1051,19 @@
                                 <th>Comment</th>
                                 <th>Reactions</th>
                                 <th>Post Author</th>
+                                <th>Post</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${data.data.map(comment => `
+                            ${allComments.map(comment => `
                                 <tr>
                                     <td><strong>${comment.comment_author || 'Unknown'}</strong></td>
                                     <td class="post-text">${comment.comment_text || 'No text'}</td>
                                     <td><span class="badge badge-reactions">${comment.comment_reactions || 0}</span></td>
                                     <td>${comment.post_author || 'Unknown'}</td>
+                                    <td>
+                                        ${comment.post_url ? `<a href="${comment.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View</a>` : 'N/A'}
+                                    </td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -732,16 +1071,18 @@
                 `;
 
                 document.getElementById('comments').innerHTML = commentsHTML;
+                document.getElementById('commentsCount').textContent = `Showing ${allComments.length} comments`;
             } catch (error) {
                 document.getElementById('comments').innerHTML = '<div class="error">Failed to load comments</div>';
             }
         }
 
-        // Load top authors
+        // Load authors
         async function loadAuthors() {
             try {
-                const response = await fetch(`${API_URL}/api/authors/top?limit=10`);
+                const response = await fetch(`${API_URL}/api/authors/top?limit=20`);
                 const data = await response.json();
+                allAuthors = data;
 
                 if (data.length === 0) {
                     document.getElementById('authors').innerHTML = '<p>No authors found</p>';
@@ -763,7 +1104,11 @@
                         <tbody>
                             ${data.map(author => `
                                 <tr>
-                                    <td><strong>${author.author || 'Unknown'}</strong></td>
+                                    <td>
+                                        <a href="https://facebook.com/${author.author}" target="_blank" class="link external-link">
+                                            <strong>${author.author || 'Unknown'}</strong> <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    </td>
                                     <td>${author.total_posts?.toLocaleString() || 0}</td>
                                     <td><span class="badge badge-reactions">${author.total_reactions?.toLocaleString() || 0}</span></td>
                                     <td><span class="badge badge-comments">${author.total_comments?.toLocaleString() || 0}</span></td>
@@ -776,9 +1121,87 @@
                 `;
 
                 document.getElementById('authors').innerHTML = authorsHTML;
+                document.getElementById('authorsCount').textContent = `Showing ${data.length} authors`;
             } catch (error) {
                 document.getElementById('authors').innerHTML = '<div class="error">Failed to load authors</div>';
             }
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const author = document.getElementById('authorFilter').value;
+
+            let filtered = allPosts.filter(post => {
+                // Search filter
+                if (search && !post.author?.toLowerCase().includes(search) && !post.text_preview?.toLowerCase().includes(search)) {
+                    return false;
+                }
+
+                // Author filter
+                if (author && post.author !== author) {
+                    return false;
+                }
+
+                // Date filter (if timestamp available)
+                // You can enhance this based on your timestamp field
+
+                return true;
+            });
+
+            renderPosts(filtered);
+            showToast(`Showing ${filtered.length} posts`);
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            const data = allPosts;
+            if (data.length === 0) {
+                showToast('No data to export');
+                return;
+            }
+
+            const headers = ['Author', 'Text', 'Reactions', 'Comments', 'Shares', 'URL'];
+            const rows = data.map(post => [
+                post.author || '',
+                (post.text_preview || '').replace(/"/g, '""'),
+                post.reactions || 0,
+                post.comments || 0,
+                post.shares || 0,
+                post.post_url || ''
+            ]);
+
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `facebook-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+
+            showToast('CSV exported successfully!');
+        }
+
+        // Refresh all data
+        async function refreshData() {
+            showToast('Refreshing data...');
+            await checkAPIHealth();
+            await loadStats();
+            await createAuthorsBarChart();
+            await createPostsDistributionPie();
+            await createEngagementDonut();
+            await createDailyTrendsLine();
+            await createPostsStackedBar();
+            await loadPosts();
+            await loadComments();
+            await loadAuthors();
+            showToast('Data refreshed!');
         }
 
         // Initialize dashboard
@@ -798,16 +1221,13 @@
             await loadComments();
             await loadAuthors();
 
-            // Refresh every 30 seconds
+            showToast('Dashboard loaded!');
+
+            // Auto-refresh every 60 seconds
             setInterval(async () => {
                 await checkAPIHealth();
                 await loadStats();
-                await createAuthorsBarChart();
-                await createPostsDistributionPie();
-                await createEngagementDonut();
-                await createDailyTrendsLine();
-                await createPostsStackedBar();
-            }, 30000);
+            }, 60000);
         }
 
         // Start when page loads
