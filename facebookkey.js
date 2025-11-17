@@ -1243,6 +1243,10 @@ function extractPostFromGraphQL(story, edgeData) {
             location: 'N/A',
             privacy: story.comet_sections?.context_layout?.story?.privacy_scope?.description || 'N/A',
 
+            // ✅ NEW: Music fields
+            music_title: 'N/A',
+            music_artist: 'N/A',
+
             // Meta
             data_source: 'graphql'
         };
@@ -1311,7 +1315,7 @@ function mergeDataSources(graphqlData, htmlData) {
     const fields = [
         'author', 'author_id', 'author_url', 'author_followers', 'content_text', 'timestamp', 'timestamp_iso',
         'post_url', 'share_url', 'image_url', 'image_source', 'video_url', 'video_source',
-        'reactions_total', 'comments', 'shares', 'views', 'location'
+        'reactions_total', 'comments', 'shares', 'views', 'location', 'music_title', 'music_artist'
     ];
 
     for (const field of fields) {
@@ -3200,37 +3204,114 @@ async function loginToFacebook(page, username, password) {
  */
 async function extractLocation(postEl) {
     try {
+        // ✅ Strategy 1: Nested span location format (new)
+        // <b class="html-b..."><span class="html-span..."><a href="..."><span class="xt0psk2"><span class="xjp7ctv"><span>Jakarta</span>
+        const nestedLocationLinks = await postEl.locator('b.html-b span.html-span a[href*="facebook.com"]').all();
+
+        for (const link of nestedLocationLinks) {
+            const href = await link.getAttribute('href');
+            const text = await link.textContent();
+
+            // Check if it's a location page (not profile or other pages)
+            if (href && text && text.trim().length > 0 && text.trim().length < 50) {
+                // Exclude common non-location patterns
+                if (!href.includes('/profile.php') && !href.includes('/photo/') && !href.includes('/groups/')) {
+                    const cleanLocation = cleanTextForCSV(text.trim());
+                    console.log(`      -> Location (nested): ${cleanLocation}`);
+                    trackStrategy('location', 'nested_span_selector');
+                    return cleanLocation;
+                }
+            }
+        }
+
+        // ✅ Strategy 2: Pages link format (existing)
         const locationSelectors = [
             'a[href*="/pages/"]:not([href*="__cft__"])',
             'a[href*="/pages/"][role="link"]',
             'div.xu06os2 a[href*="/pages/"]',
         ];
-        
+
         for (const selector of locationSelectors) {
             const locationLinks = await postEl.locator(selector).all();
-            
+
             for (const link of locationLinks) {
                 const href = await link.getAttribute('href');
                 const text = await link.textContent();
-                
+
                 if (href && href.includes('/pages/') && text && text.trim().length > 0) {
                     const cleanLocation = cleanTextForCSV(text.trim());
-                    
+
                     if (cleanLocation.length < 50) {
-                        console.log(`      -> Location: ${cleanLocation}`);
-                        trackStrategy('location', 'pages_link_selector'); // ✅ TAMBAH
+                        console.log(`      -> Location (pages): ${cleanLocation}`);
+                        trackStrategy('location', 'pages_link_selector');
                         return cleanLocation;
                     }
                 }
             }
         }
-        
+
         console.log(`      -> No location found`);
         return "N/A";
-        
+
     } catch (e) {
         console.warn(`      ⚠️ Error extract location: ${e.message.substring(0, 40)}`);
         return "N/A";
+    }
+}
+
+/**
+ * ✅ NEW: Extract Music (song title and artist) from post
+ */
+async function extractMusic(postEl) {
+    try {
+        // Music indicator: icon with music background image
+        // Structure: <a><div><i style="background-image..."></i></div><span>Title</span><span> · </span><span>Artist</span></a>
+
+        // Find all links that contain music icon
+        const musicLinks = await postEl.locator('a').all();
+
+        for (const link of musicLinks) {
+            // Check if this link contains a music icon
+            const musicIcon = link.locator('i[data-visualcompletion="css-img"]').first();
+            if (await musicIcon.count() === 0) continue;
+
+            const style = await musicIcon.getAttribute('style').catch(() => '');
+            if (!style.includes('background-image')) continue;
+
+            // Extract text spans with the specific class pattern
+            const textSpans = await link.locator('span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1nxh6w3.x1sibtaa.x1s688f.xi81zsa').all();
+
+            if (textSpans.length >= 2) {
+                const title = await textSpans[0].textContent();
+                const artist = await textSpans[1].textContent();
+
+                if (title && artist && title.trim().length > 0 && artist.trim().length > 0) {
+                    const cleanTitle = cleanTextForCSV(title.trim());
+                    const cleanArtist = cleanTextForCSV(artist.trim());
+
+                    console.log(`      -> Music: "${cleanTitle}" by ${cleanArtist}`);
+                    trackStrategy('music', 'icon_based_selector');
+
+                    return {
+                        music_title: cleanTitle,
+                        music_artist: cleanArtist
+                    };
+                }
+            }
+        }
+
+        console.log(`      -> No music found`);
+        return {
+            music_title: 'N/A',
+            music_artist: 'N/A'
+        };
+
+    } catch (e) {
+        console.warn(`      ⚠️ Error extract music: ${e.message.substring(0, 40)}`);
+        return {
+            music_title: 'N/A',
+            music_artist: 'N/A'
+        };
     }
 }
 
@@ -5261,6 +5342,8 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                     // ========== EXTRACT LOCATION ==========
                     const location = await extractLocation(postEl);
 
+                    // ========== ✅ EXTRACT MUSIC ==========
+                    const musicData = await extractMusic(postEl);
 
                     // ========== EXPAND "SEE MORE" (Enhanced for REEL) ==========
                     const seeMoreSelectors = [
@@ -5561,6 +5644,8 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                         comments: comments,
                         shares: shares,
                         views: views,
+                        music_title: musicData.music_title, // ✅ NEW: Music title
+                        music_artist: musicData.music_artist, // ✅ NEW: Music artist
                         query_used: query,
                         filter_year: filterYear || 'recent_mode',
                         scraped_at: scraped_at,
@@ -5779,6 +5864,8 @@ async function savePostRealtime(post, postFile) {
                 {id: 'comments', title: 'comments'},
                 {id: 'shares', title: 'shares'},
                 {id: 'views', title: 'views'},
+                {id: 'music_title', title: 'music_title'},
+                {id: 'music_artist', title: 'music_artist'},
                 {id: 'query_used', title: 'query_used'},
                 {id: 'filter_year', title: 'filter_year'},
                 {id: 'scraped_at', title: 'scraped_at'},
@@ -5868,6 +5955,8 @@ async function saveData(posts, postFile) {
                 {id: 'comments', title: 'comments'},
                 {id: 'shares', title: 'shares'},
                 {id: 'views', title: 'views'},
+                {id: 'music_title', title: 'music_title'},
+                {id: 'music_artist', title: 'music_artist'},
                 {id: 'query_used', title: 'query_used'},
                 {id: 'filter_year', title: 'filter_year'},
                 {id: 'scraped_at', title: 'scraped_at'},

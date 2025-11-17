@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS posts (
     query_used VARCHAR(255),
     filter_year VARCHAR(10),
     location VARCHAR(255),
+    music_title VARCHAR(500),
+    music_artist VARCHAR(255),
     scraped_at TIMESTAMP,
     updated_at TIMESTAMP DEFAULT NOW(),
 
