@@ -92,7 +92,7 @@ const CONFIG = {
     PAGE_ZOOM: 0.5,              // 50% zoom (0.5 = 50%, 1.0 = 100%)
 
     // ✅ DATABASE AUTO-SAVE - Save to PostgreSQL real-time
-    AUTO_SAVE_TO_DATABASE: true, // Enable auto-save to database (in addition to CSV)
+    AUTO_SAVE_TO_DATABASE: false, // Enable auto-save to database (in addition to CSV) - DISABLED for now
     DB_HOST: process.env.DB_HOST || 'localhost',
     DB_PORT: process.env.DB_PORT || 5433,
     DB_USER: process.env.DB_USER || 'fbadmin',
