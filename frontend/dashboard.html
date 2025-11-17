@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Analytics Dashboard - Pro</title>
+    <title>Facebook Analytics Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.7/build/d3.layout.cloud.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -597,13 +599,26 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        #wordCloud {
+            width: 100%;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #wordCloud svg {
+            max-width: 100%;
+            height: auto;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-left">
-                <h1>📊 Facebook Analytics Dashboard Pro</h1>
+                <h1>📊 Facebook Analytics Dashboard</h1>
                 <p class="subtitle">Advanced data visualization with interactive features</p>
                 <p class="subtitle" style="margin-top: 8px;">
                     <span id="refreshStatus" style="display: inline-flex; align-items: center; gap: 5px;">
@@ -666,6 +681,13 @@
             </div>
 
             <div class="chart-card">
+                <h2><i class="fas fa-chart-bar"></i> Top Authors by Post Count</h2>
+                <div class="chart-container">
+                    <canvas id="authorsHorizontalBar"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
                 <h2><i class="fas fa-chart-pie"></i> Posts Distribution by Author</h2>
                 <div class="chart-container small">
                     <canvas id="postsDistributionPie"></canvas>
@@ -691,6 +713,11 @@
                 <div class="chart-container">
                     <canvas id="postsStackedBar"></canvas>
                 </div>
+            </div>
+
+            <div class="chart-card full-width">
+                <h2><i class="fas fa-hashtag"></i> Popular Hashtags Word Cloud</h2>
+                <div id="wordCloud"></div>
             </div>
         </div>
 
@@ -893,6 +920,10 @@
                         <div class="stat-label">Total Shares</div>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-value">${data.total_views?.toLocaleString() || 0}</div>
+                        <div class="stat-label">Total Views</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-value">${data.unique_authors?.toLocaleString() || 0}</div>
                         <div class="stat-label">Unique Authors</div>
                     </div>
@@ -989,6 +1020,35 @@
             }
         }
 
+        // Center text plugin for donut chart
+        const centerTextPlugin = {
+            id: 'centerText',
+            afterDraw: (chart) => {
+                if (chart.config.type === 'doughnut' && chart.canvas.id === 'engagementDonut') {
+                    const ctx = chart.ctx;
+                    const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                    const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+
+                    const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+
+                    ctx.save();
+                    ctx.font = 'bold 32px sans-serif';
+                    ctx.fillStyle = '#667eea';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(total.toLocaleString(), centerX, centerY - 10);
+
+                    ctx.font = '14px sans-serif';
+                    ctx.fillStyle = '#666';
+                    ctx.fillText('Total Engagement', centerX, centerY + 20);
+                    ctx.restore();
+                }
+            }
+        };
+
+        // Register the plugin
+        Chart.register(centerTextPlugin);
+
         async function createEngagementDonut() {
             try {
                 const response = await fetch(`${API_URL}/api/stats`);
@@ -1062,6 +1122,13 @@
                                 data: data.map(d => d.total_shares || 0),
                                 borderColor: 'rgba(162, 155, 254, 1)',
                                 backgroundColor: 'rgba(162, 155, 254, 0.2)',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Views',
+                                data: data.map(d => d.total_views || 0),
+                                borderColor: 'rgba(102, 126, 234, 1)',
+                                backgroundColor: 'rgba(102, 126, 234, 0.2)',
                                 tension: 0.4
                             }
                         ]
@@ -1137,6 +1204,147 @@
                 });
             } catch (error) {
                 console.error('Failed to create posts stacked bar:', error);
+            }
+        }
+
+        // Horizontal bar chart for authors by post count
+        async function createAuthorsHorizontalBar() {
+            try {
+                const response = await fetch(`${API_URL}/api/authors/top?limit=10`);
+                const data = await response.json();
+
+                if (charts.authorsHorizontal) charts.authorsHorizontal.destroy();
+
+                const ctx = document.getElementById('authorsHorizontalBar').getContext('2d');
+                charts.authorsHorizontal = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(a => a.author || 'Unknown'),
+                        datasets: [{
+                            label: 'Total Posts',
+                            data: data.map(a => a.total_posts || 0),
+                            backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                            borderColor: 'rgba(118, 75, 162, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y', // This makes it horizontal
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Posts'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Author'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to create horizontal bar chart:', error);
+            }
+        }
+
+        // Word cloud from hashtags
+        async function createWordCloud() {
+            try {
+                const response = await fetch(`${API_URL}/api/posts/top/engagement?limit=200`);
+                const data = await response.json();
+
+                // Extract hashtags from text
+                const hashtagCounts = {};
+                data.forEach(post => {
+                    if (post.text_preview) {
+                        const hashtags = post.text_preview.match(/#[\w\u0080-\uFFFF]+/g);
+                        if (hashtags) {
+                            hashtags.forEach(tag => {
+                                const cleanTag = tag.toLowerCase();
+                                hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
+                            });
+                        }
+                    }
+                });
+
+                // Convert to array and sort
+                const words = Object.keys(hashtagCounts).map(word => ({
+                    text: word,
+                    size: hashtagCounts[word]
+                })).sort((a, b) => b.size - a.size).slice(0, 50);
+
+                if (words.length === 0) {
+                    document.getElementById('wordCloud').innerHTML = '<p style="text-align: center; color: #999;">No hashtags found</p>';
+                    return;
+                }
+
+                // Clear previous word cloud
+                document.getElementById('wordCloud').innerHTML = '';
+
+                // Create word cloud
+                const width = document.getElementById('wordCloud').clientWidth || 800;
+                const height = 400;
+
+                const maxSize = Math.max(...words.map(w => w.size));
+                const minSize = Math.min(...words.map(w => w.size));
+
+                const layout = d3.layout.cloud()
+                    .size([width, height])
+                    .words(words.map(d => ({
+                        text: d.text,
+                        size: 20 + (d.size / maxSize) * 60
+                    })))
+                    .padding(5)
+                    .rotate(() => (~~(Math.random() * 2) * 90))
+                    .font('Impact')
+                    .fontSize(d => d.size)
+                    .on('end', draw);
+
+                layout.start();
+
+                function draw(words) {
+                    const svg = d3.select('#wordCloud').append('svg')
+                        .attr('width', width)
+                        .attr('height', height)
+                        .append('g')
+                        .attr('transform', `translate(${width / 2},${height / 2})`);
+
+                    const colorScale = d3.scaleOrdinal()
+                        .range(['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a']);
+
+                    svg.selectAll('text')
+                        .data(words)
+                        .enter().append('text')
+                        .style('font-size', d => `${d.size}px`)
+                        .style('font-family', 'Impact')
+                        .style('fill', (d, i) => colorScale(i))
+                        .style('cursor', 'pointer')
+                        .attr('text-anchor', 'middle')
+                        .attr('transform', d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
+                        .text(d => d.text)
+                        .on('mouseover', function() {
+                            d3.select(this).style('opacity', 0.7);
+                        })
+                        .on('mouseout', function() {
+                            d3.select(this).style('opacity', 1);
+                        });
+                }
+            } catch (error) {
+                console.error('Failed to create word cloud:', error);
+                document.getElementById('wordCloud').innerHTML = '<p style="text-align: center; color: #f00;">Failed to load word cloud</p>';
             }
         }
 
@@ -1440,10 +1648,12 @@
             await checkAPIHealth();
             await loadStats();
             await createAuthorsBarChart();
+            await createAuthorsHorizontalBar();
             await createPostsDistributionPie();
             await createEngagementDonut();
             await createDailyTrendsLine();
             await createPostsStackedBar();
+            await createWordCloud();
             await loadPosts();
             await loadComments();
             await loadAuthors();
@@ -1457,10 +1667,12 @@
 
             // Create all charts
             await createAuthorsBarChart();
+            await createAuthorsHorizontalBar();
             await createPostsDistributionPie();
             await createEngagementDonut();
             await createDailyTrendsLine();
             await createPostsStackedBar();
+            await createWordCloud();
 
             // Load tables
             await loadPosts();
