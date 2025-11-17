@@ -1,4 +1,7 @@
 // facebook.js (Versi 7.0 - TIMESTAMP FIX + MULTI CSV + ENHANCED DEBUG + AUTO DATABASE SAVE)
+// ✅ Load environment variables from .env file FIRST
+require('dotenv').config();
+
 const os = require('os');
 const path = require('path');
 const { chromium } = require('playwright');
@@ -92,7 +95,7 @@ const CONFIG = {
     PAGE_ZOOM: 0.5,              // 50% zoom (0.5 = 50%, 1.0 = 100%)
 
     // ✅ DATABASE AUTO-SAVE - Save to PostgreSQL real-time
-    AUTO_SAVE_TO_DATABASE: false, // Enable auto-save to database (in addition to CSV) - DISABLED for now
+    AUTO_SAVE_TO_DATABASE: true, // Enable auto-save to database (in addition to CSV)
     DB_HOST: process.env.DB_HOST || 'localhost',
     DB_PORT: process.env.DB_PORT || 5433,
     DB_USER: process.env.DB_USER || 'fbadmin',
