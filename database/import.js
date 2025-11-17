@@ -59,8 +59,8 @@ async function importPostsCSV(filePath) {
                                 reactions, comments, shares, views,
                                 post_url, share_url, image_url, video_url, image_source, video_source,
                                 has_image, has_video, query_used, filter_year,
-                                location, scraped_at
-                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+                                location, music_title, music_artist, scraped_at
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
                         `, [
                             post.author || null,
                             post.author_url || null,
@@ -84,6 +84,8 @@ async function importPostsCSV(filePath) {
                             post.query_used || null,
                             post.filter_year || null,
                             post.location || null,
+                            post.music_title || null,
+                            post.music_artist || null,
                             post.scraped_at || post.updated_at || new Date(),
                         ]);
 
@@ -200,8 +202,8 @@ async function importPostsJSON(filePath) {
                     reactions, comments, shares, views,
                     post_url, share_url, image_url, video_url, image_source, video_source,
                     has_image, has_video, query_used, filter_year,
-                    location, scraped_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+                    location, music_title, music_artist, scraped_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
             `, [
                 post.author || null,
                 post.author_url || null,
@@ -225,6 +227,8 @@ async function importPostsJSON(filePath) {
                 post.query_used || null,
                 post.filter_year || null,
                 post.location || null,
+                post.music_title || null,
+                post.music_artist || null,
                 post.scraped_at || post.updated_at || new Date(),
             ]);
 

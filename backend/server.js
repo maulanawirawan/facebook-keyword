@@ -106,6 +106,7 @@ app.get('/api/posts', async (req, res) => {
             `SELECT id, author, SUBSTRING(text, 1, 200) as text,
                     reactions, comments, shares, views,
                     post_url, share_url, image_url,
+                    location, music_title, music_artist,
                     timestamp, query_used, filter_year, scraped_at
              FROM posts
              ORDER BY ${sortBy} ${order}
@@ -176,7 +177,8 @@ app.get('/api/posts/search', async (req, res) => {
 
         const result = await pool.query(
             `SELECT id, author, SUBSTRING(text, 1, 200) as text,
-                    reactions, comments, shares, post_url, timestamp
+                    reactions, comments, shares, post_url, timestamp,
+                    location, music_title, music_artist
              FROM posts
              WHERE text ILIKE $1 OR author ILIKE $1
              ORDER BY reactions DESC

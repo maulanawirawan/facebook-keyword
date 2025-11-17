@@ -1159,6 +1159,8 @@
                         <tr>
                             <th>Author</th>
                             <th>Text</th>
+                            <th>Location</th>
+                            <th>Music</th>
                             <th>Reactions</th>
                             <th>Comments</th>
                             <th>Shares</th>
@@ -1172,6 +1174,12 @@
                                     ${post.author ? `<a href="https://facebook.com/${post.author}" target="_blank" class="link external-link">${post.author} <i class="fas fa-external-link-alt"></i></a>` : 'Unknown'}
                                 </td>
                                 <td class="post-text">${post.text_preview || 'No text'}</td>
+                                <td>
+                                    ${post.location && post.location !== 'N/A' ? `<i class="fas fa-map-marker-alt"></i> ${post.location}` : '<span style="color: #999;">-</span>'}
+                                </td>
+                                <td>
+                                    ${post.music_title && post.music_title !== 'N/A' ? `<i class="fas fa-music"></i> <strong>${post.music_title}</strong><br><small style="color: #666;">${post.music_artist || ''}</small>` : '<span style="color: #999;">-</span>'}
+                                </td>
                                 <td><span class="badge badge-reactions">${post.reactions?.toLocaleString() || 0}</span></td>
                                 <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
                                 <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
