@@ -369,8 +369,25 @@ app.get('/api/analytics/wordcloud', async (req, res) => {
 });
 
 // ========================================
-// IMPORT DATA ENDPOINT
+// DATA MANAGEMENT ENDPOINTS
 // ========================================
+
+// Delete sample/test data
+app.delete('/api/cleanup/sample', async (req, res) => {
+    try {
+        const result = await pool.query(
+            "DELETE FROM posts WHERE author = 'Sample Author' OR query_used = 'test query'"
+        );
+
+        res.json({
+            status: 'success',
+            message: `Deleted ${result.rowCount} sample posts`,
+            deleted: result.rowCount
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Trigger data import from CSV/JSON files
 app.post('/api/import', async (req, res) => {
@@ -450,10 +467,11 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('   GET  /api/posts              - All posts (paginated)');
     console.log('   GET  /api/posts/top/engagement - Top posts');
     console.log('   GET  /api/posts/:id          - Single post with comments');
-    console.log('   GET  /api/comments           - All comments (paginated)');
-    console.log('   GET  /api/authors/top        - Top authors');
-    console.log('   GET  /api/analytics/trends   - Engagement trends');
-    console.log('   POST /api/import             - Trigger data import (CSV/JSON)');
+    console.log('   GET    /api/comments           - All comments (paginated)');
+    console.log('   GET    /api/authors/top        - Top authors');
+    console.log('   GET    /api/analytics/trends   - Engagement trends');
+    console.log('   POST   /api/import             - Trigger data import (CSV/JSON)');
+    console.log('   DELETE /api/cleanup/sample     - Delete sample/test data');
     console.log('');
 });
 
