@@ -197,15 +197,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ========================================
--- SAMPLE DATA (OPTIONAL)
--- ========================================
-
--- Insert sample post (will be replaced by real data)
-INSERT INTO posts (author, text, reactions, comments, shares, query_used, filter_year)
-VALUES ('Sample Author', 'Sample post text for testing', 100, 50, 10, 'test query', '2023')
-ON CONFLICT DO NOTHING;
-
 -- Grant permissions
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO fbadmin;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO fbadmin;
