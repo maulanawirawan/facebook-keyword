@@ -760,6 +760,30 @@ function cleanTextForCSV(text) {
 }
 
 /**
+ * ✅ Normalize Facebook URL - Fix double prefix issue
+ * Handles both absolute URLs (https://www.facebook.com/...) and relative URLs (/profile.php?id=...)
+ */
+function normalizeFacebookUrl(href) {
+    if (!href || href === 'N/A') return 'N/A';
+
+    // Clean the href first - remove tracking parameters
+    let cleanHref = href.split('&__cft__')[0].split('&__tn__')[0].split('?')[0];
+
+    // If already starts with http:// or https://, use as-is (it's an absolute URL)
+    if (cleanHref.startsWith('http://') || cleanHref.startsWith('https://')) {
+        return cleanHref;
+    }
+
+    // If it's a relative URL (starts with /), add the Facebook domain
+    if (cleanHref.startsWith('/')) {
+        return 'https://www.facebook.com' + cleanHref;
+    }
+
+    // Otherwise, assume it needs the full prefix
+    return 'https://www.facebook.com/' + cleanHref;
+}
+
+/**
  * Parse engagement count
  */
 function parseEngagementCount(text) {
@@ -1204,7 +1228,7 @@ function extractPostFromGraphQL(story, edgeData) {
             // Author
             author: story.actors?.[0]?.name || story.feedback?.owning_profile?.name || 'N/A',
             author_id: story.actors?.[0]?.id || story.feedback?.owning_profile?.id || 'N/A',
-            author_url: story.actors?.[0]?.url || (story.actors?.[0]?.id ? `https://www.facebook.com/${story.actors?.[0]?.id}` : 'N/A'),
+            author_url: normalizeFacebookUrl(story.actors?.[0]?.url || (story.actors?.[0]?.id ? `/${story.actors?.[0]?.id}` : 'N/A')),
             author_followers: story.actors?.[0]?.subscribers?.count || story.feedback?.owning_profile?.subscribers?.count || 0,
 
             // Content
@@ -1411,7 +1435,7 @@ function parseCommentsFromGraphQL(graphqlResponse, postUrl, postAuthor) {
                 post_author: postAuthor,
                 comment_id: node.legacy_fbid || node.id,
                 comment_author: node.author?.name || 'Unknown',
-                comment_author_url: node.author?.url || `https://www.facebook.com/${node.author?.id || 'unknown'}`,
+                comment_author_url: normalizeFacebookUrl(node.author?.url || `/${node.author?.id || 'unknown'}`),
                 comment_text: cleanTextForCSV(node.body?.text || ''),
                 comment_timestamp: node.created_time
                     ? new Date(node.created_time * 1000).toISOString()
@@ -1440,7 +1464,7 @@ function parseCommentsFromGraphQL(graphqlResponse, postUrl, postAuthor) {
                         post_author: postAuthor,
                         comment_id: replyNode.legacy_fbid || replyNode.id,
                         comment_author: replyNode.author?.name || 'Unknown',
-                        comment_author_url: replyNode.author?.url || `https://www.facebook.com/${replyNode.author?.id || 'unknown'}`,
+                        comment_author_url: normalizeFacebookUrl(replyNode.author?.url || `/${replyNode.author?.id || 'unknown'}`),
                         comment_text: cleanTextForCSV(replyNode.body?.text || ''),
                         comment_timestamp: replyNode.created_time
                             ? new Date(replyNode.created_time * 1000).toISOString()
@@ -2236,17 +2260,13 @@ async function extractCommentsFromDialog(page, postUrl, postAuthor) {
                 return false;
             });
 
-            comments.push(...newCommentsOnly);
-
-            // ✅ FIX: Limit comments to MAX_COMMENTS_PER_POST
-            if (comments.length > CONFIG.MAX_COMMENTS_PER_POST) {
-                comments = comments.slice(0, CONFIG.MAX_COMMENTS_PER_POST);
-                console.log(`         ✅ Reached MAX limit (${CONFIG.MAX_COMMENTS_PER_POST}), truncating...`);
-            }
-
+            // ✅ Respect MAX_COMMENTS_PER_POST limit when adding new comments (efficient approach)
+            const remainingSlots = CONFIG.MAX_COMMENTS_PER_POST - comments.length;
+            const commentsToAdd = newCommentsOnly.slice(0, remainingSlots);
+            comments.push(...commentsToAdd);
             const currentCount = comments.length;
 
-            // ✅ FIX: Break if we've reached the limit
+            // ✅ Break early if we've reached the limit
             if (currentCount >= CONFIG.MAX_COMMENTS_PER_POST) {
                 console.log(`         ✅ Reached MAX_COMMENTS_PER_POST (${CONFIG.MAX_COMMENTS_PER_POST}), stopping...`);
                 break;
@@ -2334,6 +2354,12 @@ async function extractCommentsFromDialog(page, postUrl, postAuthor) {
 
         console.log(`         ✓ Scroll complete after ${scrollAttempts} attempts`);
         console.log(`         ✅ Extracted ${comments.length} comments`);
+
+        // ✅ Ensure we don't exceed MAX_COMMENTS_PER_POST
+        if (comments.length > CONFIG.MAX_COMMENTS_PER_POST) {
+            console.log(`         ⚠️ Trimming ${comments.length - CONFIG.MAX_COMMENTS_PER_POST} comments to respect MAX_COMMENTS_PER_POST`);
+            comments = comments.slice(0, CONFIG.MAX_COMMENTS_PER_POST);
+        }
 
         // Set post_url for all comments
         for (const comment of comments) {
@@ -5058,7 +5084,7 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                 authorName = cleanTextForCSV(text.trim());
                                 // ✅ Extract author URL from href
                                 if (href) {
-                                    authorUrl = 'https://www.facebook.com' + href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                    authorUrl = normalizeFacebookUrl(href);
                                 }
                                 console.log(`      -> Author (reel): ${authorName}`);
                                 trackStrategy('author', 'reel_h2_profile_link'); // ✅ TAMBAH
@@ -5075,7 +5101,7 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                     authorName = cleanTextForCSV(text.trim());
                                     // ✅ Extract author URL from href
                                     if (href) {
-                                        authorUrl = 'https://www.facebook.com' + href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                        authorUrl = normalizeFacebookUrl(href);
                                     }
                                     console.log(`      -> Author (reel profile): ${authorName}`);
                                     trackStrategy('author', 'reel_profile_php'); // ✅ TAMBAH
@@ -5155,7 +5181,7 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                     authorName = authorNames.join(' with ');
                                     // ✅ Set author URL from first author
                                     if (firstAuthorUrl) {
-                                        authorUrl = 'https://www.facebook.com' + firstAuthorUrl.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                        authorUrl = normalizeFacebookUrl(firstAuthorUrl);
                                     }
                                     console.log(`      -> Authors (is with): ${authorName} (${authorNames.length} authors)`);
                                     trackStrategy('author', 'is_with_pattern'); // ✅ TAMBAH
@@ -5179,7 +5205,7 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                         if (name && name.trim()) {
                                             authorName = cleanTextForCSV(name.trim());
                                             // ✅ Extract author URL from href
-                                            authorUrl = 'https://www.facebook.com' + href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                            authorUrl = normalizeFacebookUrl(href);
                                             console.log(`      -> Author (is in): ${authorName}`);
                                             trackStrategy('author', 'is_in_pattern'); // ✅ TAMBAH
                                         }
@@ -5254,7 +5280,7 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                     authorName = authorNames.join(' and ');
                                     // ✅ Set author URL from first author
                                     if (firstAuthorUrl) {
-                                        authorUrl = 'https://www.facebook.com' + firstAuthorUrl.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                        authorUrl = normalizeFacebookUrl(firstAuthorUrl);
                                     }
                                     console.log(`      -> Authors (and): ${authorName} (${authorNames.length} authors)`);
                                     trackStrategy('author', 'and_pattern'); // ✅ TAMBAH
@@ -5342,16 +5368,7 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                 // ✅ Extract author URL from href
                                 const href = await authorLinkEl.getAttribute('href');
                                 if (href) {
-                                    // Clean URL and remove tracking parameters
-                                    let cleanHref = href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
-                                    // ✅ FIX: Check if URL is already full URL or relative
-                                    if (cleanHref.startsWith('http://') || cleanHref.startsWith('https://')) {
-                                        // Already full URL, just use it
-                                        authorUrl = cleanHref;
-                                    } else {
-                                        // Relative URL, add facebook.com prefix
-                                        authorUrl = 'https://www.facebook.com' + cleanHref;
-                                    }
+                                    authorUrl = normalizeFacebookUrl(href);
                                 }
                                 console.log(`      -> Author: ${authorName}`);
                                 trackStrategy('author', 'single_author_fallback'); // ✅ TAMBAH
