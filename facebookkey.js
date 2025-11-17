@@ -2636,6 +2636,78 @@ async function saveCommentsRealtime(comments, commentFile) {
 }
 
 /**
+ * ✅ Save Comments to JSON (Realtime)
+ */
+async function saveCommentsRealtimeJSON(comments, jsonFile) {
+    if (comments.length === 0) return;
+
+    try {
+        let existingData = [];
+
+        // Load existing JSON if file exists
+        if (fs.existsSync(jsonFile)) {
+            try {
+                const fileContent = fs.readFileSync(jsonFile, 'utf8');
+                existingData = JSON.parse(fileContent);
+                if (!Array.isArray(existingData)) {
+                    existingData = [];
+                }
+            } catch (parseError) {
+                console.warn(`      ⚠️ Could not parse existing JSON, starting fresh`);
+                existingData = [];
+            }
+        }
+
+        // Append new comments
+        existingData.push(...comments);
+
+        // Write back to file with pretty formatting
+        fs.writeFileSync(jsonFile, JSON.stringify(existingData, null, 2), 'utf8');
+        fs.chmodSync(jsonFile, CONFIG.FILE_PERMISSIONS);
+
+        console.log(`      💾 Saved ${comments.length} comments to ${jsonFile} (total: ${existingData.length})`);
+    } catch (error) {
+        console.warn(`      ⚠️ Comment JSON save error: ${error.message}`);
+    }
+}
+
+/**
+ * ✅ Save Posts to JSON (Realtime)
+ */
+async function savePostsRealtimeJSON(posts, jsonFile) {
+    if (posts.length === 0) return;
+
+    try {
+        let existingData = [];
+
+        // Load existing JSON if file exists
+        if (fs.existsSync(jsonFile)) {
+            try {
+                const fileContent = fs.readFileSync(jsonFile, 'utf8');
+                existingData = JSON.parse(fileContent);
+                if (!Array.isArray(existingData)) {
+                    existingData = [];
+                }
+            } catch (parseError) {
+                console.warn(`      ⚠️ Could not parse existing JSON, starting fresh`);
+                existingData = [];
+            }
+        }
+
+        // Append new posts
+        existingData.push(...posts);
+
+        // Write back to file with pretty formatting
+        fs.writeFileSync(jsonFile, JSON.stringify(existingData, null, 2), 'utf8');
+        fs.chmodSync(jsonFile, CONFIG.FILE_PERMISSIONS);
+
+        console.log(`      💾 Saved ${posts.length} posts to ${jsonFile} (total: ${existingData.length})`);
+    } catch (error) {
+        console.warn(`      ⚠️ Post JSON save error: ${error.message}`);
+    }
+}
+
+/**
  * Debug pause
  */
 async function debugPause(message) {
@@ -5439,6 +5511,9 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
 
                             if (extractedComments.length > 0) {
                                 await saveCommentsRealtime(extractedComments, commentFilename);
+                                // ✅ ALSO SAVE TO JSON
+                                const commentFilenameJSON = commentFilename.replace('.csv', '.json');
+                                await saveCommentsRealtimeJSON(extractedComments, commentFilenameJSON);
                             }
                         } catch (commentError) {
                             console.warn(`      ⚠️ Comment extraction error: ${commentError.message}`);
@@ -5582,6 +5657,11 @@ async function savePostRealtime(post, postFile) {
         fs.chmodSync(postFile, CONFIG.FILE_PERMISSIONS);
 
         console.log(`      💾 Realtime saved to ${postFile}`);
+
+        // ✅ ALSO SAVE TO JSON
+        const postFileJSON = postFile.replace('.csv', '.json');
+        await savePostsRealtimeJSON([post], postFileJSON);
+
     } catch (error) {
         console.warn(`      ⚠️ Realtime save error: ${error.message}`);
     }
