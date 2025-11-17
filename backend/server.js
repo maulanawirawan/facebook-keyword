@@ -424,6 +424,151 @@ app.delete('/api/cleanup/all', async (req, res) => {
     }
 });
 
+// ========================================
+// REAL-TIME DATA IMPORT (from facebookkey.js)
+// ========================================
+
+// Save single post (real-time from scraper)
+app.post('/api/posts/save', async (req, res) => {
+    try {
+        const post = req.body;
+
+        // Validate required fields
+        if (!post.post_url && !post.share_url) {
+            return res.status(400).json({
+                success: false,
+                error: 'post_url or share_url is required'
+            });
+        }
+
+        // Check if post exists
+        const existingQuery = 'SELECT id FROM posts WHERE post_url = $1 OR share_url = $1';
+        const existing = await pool.query(existingQuery, [post.post_url || post.share_url]);
+
+        if (existing.rows.length > 0) {
+            // Update existing post
+            const updateQuery = `
+                UPDATE posts SET
+                    author = $1, author_url = $2, author_followers = $3,
+                    text = $4, timestamp = $5, timestamp_iso = $6, timestamp_unix = $7,
+                    reactions = $8, comments = $9, shares = $10, views = $11,
+                    image_url = $12, video_url = $13, image_source = $14, video_source = $15,
+                    has_image = $16, has_video = $17,
+                    query_used = $18, filter_year = $19, location = $20,
+                    music_title = $21, music_artist = $22, updated_at = NOW()
+                WHERE post_url = $23 OR share_url = $23
+                RETURNING id
+            `;
+            const result = await pool.query(updateQuery, [
+                post.author, post.author_url, post.author_followers || 0,
+                post.text || post.content_text, post.timestamp, post.timestamp_iso, post.timestamp_unix || 0,
+                post.reactions || post.reactions_total || 0, post.comments || 0, post.shares || 0, post.views || 0,
+                post.image_url, post.video_url, post.image_source, post.video_source,
+                post.has_image || false, post.has_video || false,
+                post.query_used, post.filter_year, post.location,
+                post.music_title, post.music_artist,
+                post.post_url || post.share_url
+            ]);
+
+            res.json({
+                success: true,
+                action: 'updated',
+                id: result.rows[0].id
+            });
+        } else {
+            // Insert new post
+            const insertQuery = `
+                INSERT INTO posts (
+                    author, author_url, author_followers,
+                    text, timestamp, timestamp_iso, timestamp_unix,
+                    reactions, comments, shares, views,
+                    post_url, share_url, image_url, video_url, image_source, video_source,
+                    has_image, has_video, query_used, filter_year, location,
+                    music_title, music_artist, scraped_at
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+                    $18, $19, $20, $21, $22, $23, $24, NOW()
+                ) RETURNING id
+            `;
+            const result = await pool.query(insertQuery, [
+                post.author, post.author_url, post.author_followers || 0,
+                post.text || post.content_text, post.timestamp, post.timestamp_iso, post.timestamp_unix || 0,
+                post.reactions || post.reactions_total || 0, post.comments || 0, post.shares || 0, post.views || 0,
+                post.post_url, post.share_url, post.image_url, post.video_url, post.image_source, post.video_source,
+                post.has_image || false, post.has_video || false,
+                post.query_used, post.filter_year, post.location,
+                post.music_title, post.music_artist
+            ]);
+
+            res.json({
+                success: true,
+                action: 'inserted',
+                id: result.rows[0].id
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error saving post:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Save multiple comments (real-time from scraper)
+app.post('/api/comments/save', async (req, res) => {
+    try {
+        const comments = req.body.comments || [];
+        let saved = 0;
+        let skipped = 0;
+
+        for (const comment of comments) {
+            try {
+                // Check if comment exists
+                const existingQuery = 'SELECT id FROM comments WHERE comment_id = $1 AND post_url = $2';
+                const existing = await pool.query(existingQuery, [comment.comment_id, comment.post_url]);
+
+                if (existing.rows.length === 0) {
+                    // Insert new comment
+                    const insertQuery = `
+                        INSERT INTO comments (
+                            post_url, post_author, comment_id, comment_author, comment_author_url,
+                            comment_text, comment_timestamp, comment_timestamp_unix,
+                            comment_reactions, comment_replies_count, comment_depth,
+                            parent_comment_id, data_source
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                    `;
+                    await pool.query(insertQuery, [
+                        comment.post_url, comment.post_author, comment.comment_id,
+                        comment.comment_author, comment.comment_author_url,
+                        comment.comment_text, comment.comment_timestamp, comment.comment_timestamp_unix || 0,
+                        comment.comment_reactions || 0, comment.comment_replies_count || 0, comment.comment_depth || 0,
+                        comment.parent_comment_id, comment.data_source || 'html'
+                    ]);
+                    saved++;
+                } else {
+                    skipped++;
+                }
+            } catch (err) {
+                console.error('❌ Error saving comment:', err.message);
+            }
+        }
+
+        res.json({
+            success: true,
+            saved,
+            skipped,
+            total: comments.length
+        });
+    } catch (error) {
+        console.error('❌ Error saving comments:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Trigger data import from CSV/JSON files
 app.post('/api/import', async (req, res) => {
     try {
@@ -497,11 +642,13 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('');
     console.log('📊 Available endpoints:');
-    console.log('   GET  /api/stats              - Overall statistics');
-    console.log('   GET  /api/stats/daily        - Daily statistics');
-    console.log('   GET  /api/posts              - All posts (paginated)');
-    console.log('   GET  /api/posts/top/engagement - Top posts');
-    console.log('   GET  /api/posts/:id          - Single post with comments');
+    console.log('   GET    /api/stats              - Overall statistics');
+    console.log('   GET    /api/stats/daily        - Daily statistics');
+    console.log('   GET    /api/posts              - All posts (paginated)');
+    console.log('   GET    /api/posts/top/engagement - Top posts');
+    console.log('   GET    /api/posts/:id          - Single post with comments');
+    console.log('   POST   /api/posts/save         - Save single post (real-time)');
+    console.log('   POST   /api/comments/save      - Save comments (real-time)');
     console.log('   GET    /api/comments           - All comments (paginated)');
     console.log('   GET    /api/authors/top        - Top authors');
     console.log('   GET    /api/analytics/trends   - Engagement trends');

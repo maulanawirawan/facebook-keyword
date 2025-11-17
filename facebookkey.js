@@ -1,4 +1,4 @@
-// facebook.js (Versi 7.0 - TIMESTAMP FIX + MULTI CSV + ENHANCED DEBUG + AUTO DATABASE SAVE)
+// facebook.js (Versi 8.0 - API-BASED AUTO-SAVE + TIMESTAMP FIX + MULTI CSV)
 // ✅ Load environment variables from .env file FIRST
 require('dotenv').config();
 
@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
 const { createObjectCsvWriter } = require('csv-writer');
 const csvParser = require('csv-parser');
 const fs = require('fs');
-const { Pool } = require('pg');
+const axios = require('axios');
 
 // ======== KONFIGURASI ========
 const CONFIG = {
@@ -94,42 +94,29 @@ const CONFIG = {
     // ✅ ZOOM SETTING - untuk timestamp dan layout issues
     PAGE_ZOOM: 0.5,              // 50% zoom (0.5 = 50%, 1.0 = 100%)
 
-    // ✅ DATABASE AUTO-SAVE - Save to PostgreSQL real-time
-    AUTO_SAVE_TO_DATABASE: true, // Enable auto-save to database (in addition to CSV)
-    DB_HOST: process.env.DB_HOST || 'localhost',
-    DB_PORT: parseInt(process.env.DB_PORT) || 5432,  // ✅ FIXED: Changed from 5433 to 5432
-    DB_USER: process.env.DB_USER || 'fbadmin',
-    DB_PASSWORD: process.env.DB_PASSWORD || 'fbpass123',
-    DB_NAME: process.env.DB_NAME || 'facebook_data',
+    // ✅ API-BASED AUTO-SAVE - Save to database via API (no direct DB connection needed!)
+    AUTO_SAVE_TO_DATABASE: true, // Enable auto-save to database via API
+    API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:3000', // Backend API URL
+    API_TIMEOUT: 10000, // 10 seconds timeout for API requests
 };
 
-// ✅ PostgreSQL Connection Pool
-let pool = null;
-let isDatabaseAvailable = false;
+// ✅ API Connection Check
+let isApiAvailable = false;
 
 if (CONFIG.AUTO_SAVE_TO_DATABASE) {
-    pool = new Pool({
-        host: CONFIG.DB_HOST,
-        port: CONFIG.DB_PORT,
-        user: CONFIG.DB_USER,
-        password: CONFIG.DB_PASSWORD,
-        database: CONFIG.DB_NAME,
-        max: 20, // Maximum pool size
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
-    });
-
-    // Test connection on startup
-    pool.query('SELECT NOW()', (err, res) => {
-        if (err) {
-            console.error('❌ PostgreSQL connection failed:', err.message);
-            console.log('   ⚠️  Will save to CSV only (database disabled)');
-            isDatabaseAvailable = false;
-        } else {
-            console.log('✅ PostgreSQL connected:', res.rows[0].now);
-            isDatabaseAvailable = true;
-        }
-    });
+    // Test API connection on startup
+    axios.get(`${CONFIG.API_BASE_URL}/health`, { timeout: 5000 })
+        .then(response => {
+            console.log('✅ API connected:', response.data.database);
+            console.log(`   API URL: ${CONFIG.API_BASE_URL}`);
+            isApiAvailable = true;
+        })
+        .catch(err => {
+            console.error('❌ API connection failed:', err.message);
+            console.log('   ⚠️  Will save to CSV only (API disabled)');
+            console.log(`   ⚠️  Make sure backend is running: docker-compose up -d api`);
+            isApiAvailable = false;
+        });
 }
 
 let isJobRunning = false;
@@ -2851,115 +2838,57 @@ async function saveCommentsRealtimeJSON(comments, jsonFile) {
 // ============================================================================
 
 /**
- * ✅ Save Single Post to PostgreSQL Database
+ * ✅ Save Single Post to Database via API
  */
 async function savePostToDatabase(post) {
-    if (!isDatabaseAvailable || !pool) {
-        return false; // Skip if database not available
+    if (!isApiAvailable) {
+        return false; // Skip if API not available
     }
 
     try {
-        // Check if post already exists
-        const existingQuery = 'SELECT id FROM posts WHERE post_url = $1 OR share_url = $1';
-        const existing = await pool.query(existingQuery, [post.post_url || post.share_url]);
+        const response = await axios.post(
+            `${CONFIG.API_BASE_URL}/api/posts/save`,
+            post,
+            { timeout: CONFIG.API_TIMEOUT }
+        );
 
-        if (existing.rows.length > 0) {
-            // Update existing post
-            const updateQuery = `
-                UPDATE posts SET
-                    author = $1, author_url = $2, author_followers = $3,
-                    location = $4, timestamp = $5, timestamp_iso = $6,
-                    share_url = $7, content_text = $8,
-                    image_url = $9, video_url = $10, image_source = $11, video_source = $12,
-                    reactions_total = $13, comments = $14, shares = $15, views = $16,
-                    music_title = $17, music_artist = $18,
-                    query_used = $19, filter_year = $20, updated_at = $21
-                WHERE post_url = $22 OR share_url = $22
-            `;
-            await pool.query(updateQuery, [
-                post.author, post.author_url, post.author_followers || 0,
-                post.location, post.timestamp, post.timestamp_iso,
-                post.share_url, post.content_text,
-                post.image_url, post.video_url, post.image_source, post.video_source,
-                post.reactions_total || 0, post.comments || 0, post.shares || 0, post.views || 0,
-                post.music_title, post.music_artist,
-                post.query_used, post.filter_year, new Date().toISOString(),
-                post.post_url || post.share_url
-            ]);
+        if (response.data.success) {
             return true;
         } else {
-            // Insert new post
-            const insertQuery = `
-                INSERT INTO posts (
-                    author, author_url, author_followers,
-                    location, timestamp, timestamp_iso,
-                    post_url, share_url, content_text,
-                    image_url, video_url, image_source, video_source,
-                    reactions_total, comments, shares, views,
-                    music_title, music_artist,
-                    query_used, filter_year, scraped_at, updated_at
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                    $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
-                )
-            `;
-            await pool.query(insertQuery, [
-                post.author, post.author_url, post.author_followers || 0,
-                post.location, post.timestamp, post.timestamp_iso,
-                post.post_url, post.share_url, post.content_text,
-                post.image_url, post.video_url, post.image_source, post.video_source,
-                post.reactions_total || 0, post.comments || 0, post.shares || 0, post.views || 0,
-                post.music_title, post.music_artist,
-                post.query_used, post.filter_year,
-                post.scraped_at || new Date().toISOString(),
-                post.updated_at || new Date().toISOString()
-            ]);
-            return true;
+            console.error(`      ⚠️  API save error: ${response.data.error}`);
+            return false;
         }
     } catch (error) {
-        console.error(`      ⚠️  Database save error: ${error.message}`);
+        console.error(`      ⚠️  API request error: ${error.message}`);
         return false;
     }
 }
 
 /**
- * ✅ Save Comments to PostgreSQL Database
+ * ✅ Save Comments to Database via API
  */
 async function saveCommentsToDatabase(comments) {
-    if (!isDatabaseAvailable || !pool || comments.length === 0) {
+    if (!isApiAvailable || comments.length === 0) {
         return false;
     }
 
-    let saved = 0;
-    for (const comment of comments) {
-        try {
-            // Check if comment already exists
-            const existingQuery = 'SELECT id FROM comments WHERE comment_id = $1 AND post_url = $2';
-            const existing = await pool.query(existingQuery, [comment.comment_id, comment.post_url]);
+    try {
+        const response = await axios.post(
+            `${CONFIG.API_BASE_URL}/api/comments/save`,
+            { comments },
+            { timeout: CONFIG.API_TIMEOUT }
+        );
 
-            if (existing.rows.length === 0) {
-                // Insert new comment
-                const insertQuery = `
-                    INSERT INTO comments (
-                        post_url, post_author, comment_id, comment_author, comment_author_url,
-                        comment_text, comment_timestamp, comment_timestamp_unix,
-                        parent_comment_id, comment_depth, data_source
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                `;
-                await pool.query(insertQuery, [
-                    comment.post_url, comment.post_author, comment.comment_id,
-                    comment.comment_author, comment.comment_author_url,
-                    comment.comment_text, comment.comment_timestamp, comment.comment_timestamp_unix || 0,
-                    comment.parent_comment_id, comment.comment_depth || 0, comment.data_source || 'html'
-                ]);
-                saved++;
-            }
-        } catch (error) {
-            console.error(`      ⚠️  Comment save error: ${error.message}`);
+        if (response.data.success) {
+            return response.data.saved;
+        } else {
+            console.error(`      ⚠️  API save error: ${response.data.error}`);
+            return false;
         }
+    } catch (error) {
+        console.error(`      ⚠️  API request error: ${error.message}`);
+        return false;
     }
-
-    return saved;
 }
 
 /**
