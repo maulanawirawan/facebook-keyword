@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS posts (
     -- Post Info
     author VARCHAR(255),
     author_url TEXT,
+    author_followers INTEGER DEFAULT 0,
     text TEXT,
     timestamp VARCHAR(255),
+    timestamp_iso TIMESTAMP,
     timestamp_unix BIGINT,
 
     -- Engagement Metrics
@@ -29,6 +31,8 @@ CREATE TABLE IF NOT EXISTS posts (
     share_url TEXT,
     image_url TEXT,
     video_url TEXT,
+    image_source TEXT,
+    video_source TEXT,
     has_image BOOLEAN DEFAULT FALSE,
     has_video BOOLEAN DEFAULT FALSE,
 
