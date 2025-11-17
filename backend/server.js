@@ -616,6 +616,78 @@ app.post('/api/import', async (req, res) => {
 });
 
 // ========================================
+// WORD CLOUD & ANALYTICS
+// ========================================
+
+// Get hashtags and keywords for word cloud
+app.get('/api/analytics/wordcloud', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 100;
+
+        // Extract hashtags and keywords from posts text
+        const result = await pool.query(`
+            SELECT text FROM posts WHERE text IS NOT NULL AND text != ''
+        `);
+
+        const wordCount = {};
+        const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who', 'when', 'where', 'why', 'how', 'yang', 'dan', 'di', 'ke', 'dari', 'untuk', 'dengan', 'ini', 'itu', 'tidak', 'ada', 'adalah', 'akan', 'pada', 'saya', 'kita', 'kami', 'mereka']);
+
+        result.rows.forEach(row => {
+            const text = row.text.toLowerCase();
+
+            // Extract hashtags
+            const hashtags = text.match(/#[\w]+/g);
+            if (hashtags) {
+                hashtags.forEach(tag => {
+                    const cleanTag = tag.substring(1); // Remove #
+                    wordCount[cleanTag] = (wordCount[cleanTag] || 0) + 5; // Weight hashtags higher
+                });
+            }
+
+            // Extract words (min 4 characters, not stopwords)
+            const words = text.match(/\b[\w]{4,}\b/g);
+            if (words) {
+                words.forEach(word => {
+                    if (!stopWords.has(word) && !/^\d+$/.test(word)) {
+                        wordCount[word] = (wordCount[word] || 0) + 1;
+                    }
+                });
+            }
+        });
+
+        // Sort by count and get top N
+        const wordCloudData = Object.entries(wordCount)
+            .map(([word, count]) => ({ word, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, limit);
+
+        res.json(wordCloudData);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get posts with views data
+app.get('/api/posts/views', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 20;
+
+        const result = await pool.query(`
+            SELECT id, author, SUBSTRING(text, 1, 100) as text_preview,
+                   reactions, comments, shares, views, post_url
+            FROM posts
+            WHERE views > 0
+            ORDER BY views DESC
+            LIMIT $1
+        `, [limit]);
+
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========================================
 // ERROR HANDLING
 // ========================================
 
@@ -646,12 +718,14 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('   GET    /api/stats/daily        - Daily statistics');
     console.log('   GET    /api/posts              - All posts (paginated)');
     console.log('   GET    /api/posts/top/engagement - Top posts');
+    console.log('   GET    /api/posts/views        - Posts with views (sorted)');
     console.log('   GET    /api/posts/:id          - Single post with comments');
     console.log('   POST   /api/posts/save         - Save single post (real-time)');
     console.log('   POST   /api/comments/save      - Save comments (real-time)');
     console.log('   GET    /api/comments           - All comments (paginated)');
     console.log('   GET    /api/authors/top        - Top authors');
     console.log('   GET    /api/analytics/trends   - Engagement trends');
+    console.log('   GET    /api/analytics/wordcloud - Word cloud data (hashtags & keywords)');
     console.log('   POST   /api/import             - Trigger data import (CSV/JSON)');
     console.log('   DELETE /api/cleanup/sample     - Delete sample/test data');
     console.log('   DELETE /api/cleanup/all        - Delete ALL data (fresh start)');
