@@ -561,6 +561,11 @@
             to { transform: translateX(0); }
         }
 
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .pagination {
             display: flex;
             justify-content: center;
@@ -600,6 +605,13 @@
             <div class="header-left">
                 <h1>📊 Facebook Analytics Dashboard Pro</h1>
                 <p class="subtitle">Advanced data visualization with interactive features</p>
+                <p class="subtitle" style="margin-top: 8px;">
+                    <span id="refreshStatus" style="display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-circle" style="color: #22c55e; font-size: 8px; animation: pulse 2s infinite;"></i>
+                        <span style="font-weight: 500;">Live Updates Active</span>
+                        <span style="opacity: 0.7;">• Next refresh in <span id="refreshCountdown">10</span>s</span>
+                    </span>
+                </p>
             </div>
             <div class="header-right">
                 <button class="btn btn-primary" onclick="refreshData()">
@@ -1457,11 +1469,38 @@
 
             showToast('Dashboard loaded!');
 
-            // Auto-refresh every 60 seconds
+            // ✅ COUNTDOWN TIMER: Update countdown every second
+            let countdown = 10;
+            setInterval(() => {
+                countdown--;
+                if (countdown <= 0) countdown = 10;
+                const countdownEl = document.getElementById('refreshCountdown');
+                if (countdownEl) countdownEl.textContent = countdown;
+            }, 1000);
+
+            // ✅ AUTO-REFRESH: Update data every 10 seconds for real-time updates
             setInterval(async () => {
+                console.log('🔄 Auto-refreshing data...');
+
+                // Refresh stats (lightweight)
                 await checkAPIHealth();
                 await loadStats();
-            }, 60000);
+
+                // Refresh tables (posts, comments, authors)
+                await loadPosts();
+                await loadComments();
+                await loadAuthors();
+
+                // Refresh charts (only if visible)
+                const currentTab = document.querySelector('.tab-content[style*="display: block"]');
+                if (!currentTab || currentTab.id === 'tab-posts') {
+                    // If on main view, refresh main charts
+                    await createAuthorsBarChart();
+                    await createDailyTrendsLine();
+                }
+
+                console.log('✅ Data refreshed!');
+            }, 10000); // Refresh every 10 seconds for real-time updates
         }
 
         // Start when page loads

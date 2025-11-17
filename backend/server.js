@@ -103,7 +103,7 @@ app.get('/api/posts', async (req, res) => {
 
         // Get posts
         const result = await pool.query(
-            `SELECT id, author, SUBSTRING(text, 1, 200) as text,
+            `SELECT id, author, SUBSTRING(text, 1, 200) as text_preview,
                     reactions, comments, shares, views,
                     post_url, share_url, image_url,
                     location, music_title, music_artist,
@@ -176,7 +176,7 @@ app.get('/api/posts/search', async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
 
         const result = await pool.query(
-            `SELECT id, author, SUBSTRING(text, 1, 200) as text,
+            `SELECT id, author, SUBSTRING(text, 1, 200) as text_preview,
                     reactions, comments, shares, post_url, timestamp,
                     location, music_title, music_artist
              FROM posts
@@ -278,8 +278,9 @@ app.get('/api/authors/:name', async (req, res) => {
 
         // Get recent posts
         const posts = await pool.query(
-            `SELECT id, SUBSTRING(text, 1, 200) as text,
-                    reactions, comments, shares, timestamp, post_url
+            `SELECT id, SUBSTRING(text, 1, 200) as text_preview,
+                    reactions, comments, shares, timestamp, post_url,
+                    location, music_title, music_artist
              FROM posts
              WHERE author = $1
              ORDER BY scraped_at DESC
