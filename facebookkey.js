@@ -4952,13 +4952,20 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                     }
 
                     // ========== EXTRACT AUTHOR (SUPPORT MULTIPLE AUTHORS + REEL + OTHERS) ==========
+                    let authorUrl = "N/A"; // ✅ NEW: Track author profile URL from DOM
+
                     try {
                         // ✅ Strategy 0: REEL author (h2 with specific class)
                         const reelAuthorEl = postEl.locator('h2.html-h2 a[aria-label*="See owner profile"]').first();
                         if (await reelAuthorEl.count() > 0) {
                             const text = await reelAuthorEl.textContent();
+                            const href = await reelAuthorEl.getAttribute('href');
                             if (text && text.trim()) {
                                 authorName = cleanTextForCSV(text.trim());
+                                // ✅ Extract author URL from href
+                                if (href) {
+                                    authorUrl = 'https://www.facebook.com' + href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                }
                                 console.log(`      -> Author (reel): ${authorName}`);
                                 trackStrategy('author', 'reel_h2_profile_link'); // ✅ TAMBAH
                             }
@@ -4969,8 +4976,13 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                             const reelAuthorAlt = postEl.locator('h2 a[href*="/profile.php"]').first();
                             if (await reelAuthorAlt.count() > 0) {
                                 const text = await reelAuthorAlt.textContent();
+                                const href = await reelAuthorAlt.getAttribute('href');
                                 if (text && text.trim()) {
                                     authorName = cleanTextForCSV(text.trim());
+                                    // ✅ Extract author URL from href
+                                    if (href) {
+                                        authorUrl = 'https://www.facebook.com' + href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                    }
                                     console.log(`      -> Author (reel profile): ${authorName}`);
                                     trackStrategy('author', 'reel_profile_php'); // ✅ TAMBAH
                                 }
@@ -4980,12 +4992,13 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                         // ✅ Strategy 1a: Pattern "X is with Y at Location"
                         if (authorName === "N/A") {
                             const withContainer = postEl.locator('h3:has-text(" is with "), h2:has-text(" is with ")').first();
-                            
+
                             if (await withContainer.count() > 0) {
                                 // Get all bold author links (exclude location link)
                                 const authorLinks = await withContainer.locator('b a[role="link"]').all();
                                 const authorNames = [];
-                                
+                                let firstAuthorUrl = null; // ✅ NEW: Track first author URL
+
                                 for (const link of authorLinks) {
                                     const href = await link.getAttribute('href');
                                     // Skip if it's a page/location link
@@ -4993,6 +5006,10 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                         const name = await link.innerText().catch(() => '');
                                         if (name && name.trim()) {
                                             authorNames.push(cleanTextForCSV(name.trim()));
+                                            // ✅ Save first author's URL
+                                            if (!firstAuthorUrl) {
+                                                firstAuthorUrl = href;
+                                            }
                                         }
                                     }
                                 }
@@ -5042,6 +5059,10 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                 
                                 if (authorNames.length > 0) {
                                     authorName = authorNames.join(' with ');
+                                    // ✅ Set author URL from first author
+                                    if (firstAuthorUrl) {
+                                        authorUrl = 'https://www.facebook.com' + firstAuthorUrl.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                    }
                                     console.log(`      -> Authors (is with): ${authorName} (${authorNames.length} authors)`);
                                     trackStrategy('author', 'is_with_pattern'); // ✅ TAMBAH
                                 }
@@ -5051,11 +5072,11 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                         // ✅ Strategy 1b: Pattern "X is in Location"
                         if (authorName === "N/A") {
                             const inContainer = postEl.locator('span:has-text(" is in "), h3:has-text(" is in ")').first();
-                            
+
                             if (await inContainer.count() > 0) {
                                 // Get ONLY the FIRST bold author link (before "is in")
                                 const firstAuthorLink = await inContainer.locator('b a[role="link"]').first();
-                                
+
                                 if (await firstAuthorLink.count() > 0) {
                                     const href = await firstAuthorLink.getAttribute('href');
                                     // Make sure it's not a location link
@@ -5063,6 +5084,8 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                         const name = await firstAuthorLink.innerText().catch(() => '');
                                         if (name && name.trim()) {
                                             authorName = cleanTextForCSV(name.trim());
+                                            // ✅ Extract author URL from href
+                                            authorUrl = 'https://www.facebook.com' + href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
                                             console.log(`      -> Author (is in): ${authorName}`);
                                             trackStrategy('author', 'is_in_pattern'); // ✅ TAMBAH
                                         }
@@ -5074,16 +5097,24 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                         // ✅ Strategy 2: Pattern "X and Y and Z others"
                         if (authorName === "N/A") {
                             const multiAuthorContainer = postEl.locator('span.x193iq5w.xeuugli:has(b):has-text(" and ")').first();
-                            
+
                             if (await multiAuthorContainer.count() > 0) {
                                 // Multiple authors detected
                                 const authorLinks = await multiAuthorContainer.locator('b a[role="link"]').all();
                                 const authorNames = [];
-                                
+                                let firstAuthorUrl = null; // ✅ NEW: Track first author URL
+
                                 for (const link of authorLinks) {
                                     const name = await link.innerText().catch(() => '');
                                     if (name && name.trim()) {
                                         authorNames.push(cleanTextForCSV(name.trim()));
+                                        // ✅ Save first author's URL
+                                        if (!firstAuthorUrl) {
+                                            const href = await link.getAttribute('href');
+                                            if (href) {
+                                                firstAuthorUrl = href;
+                                            }
+                                        }
                                     }
                                 }
                                 
@@ -5127,6 +5158,10 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                 
                                 if (authorNames.length > 0) {
                                     authorName = authorNames.join(' and ');
+                                    // ✅ Set author URL from first author
+                                    if (firstAuthorUrl) {
+                                        authorUrl = 'https://www.facebook.com' + firstAuthorUrl.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                    }
                                     console.log(`      -> Authors (and): ${authorName} (${authorNames.length} authors)`);
                                     trackStrategy('author', 'and_pattern'); // ✅ TAMBAH
                                 }
@@ -5201,9 +5236,20 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                         
                         // Strategy 4: Single author (existing logic - fallback)
                         if (authorName === "N/A") {
-                            const authorEl = await postEl.locator('h3 a, h2 a strong, h4 a strong, a[role="link"] strong').first();
-                            if (await authorEl.count() > 0) {
-                                authorName = cleanTextForCSV(await authorEl.innerText());
+                            // ✅ Try to find the parent link element first
+                            const authorLinkEl = await postEl.locator('h3 a, h2 a, h4 a, a[role="link"]:has(strong)').first();
+                            if (await authorLinkEl.count() > 0) {
+                                const strongEl = await authorLinkEl.locator('strong').first();
+                                if (await strongEl.count() > 0) {
+                                    authorName = cleanTextForCSV(await strongEl.innerText());
+                                } else {
+                                    authorName = cleanTextForCSV(await authorLinkEl.innerText());
+                                }
+                                // ✅ Extract author URL from href
+                                const href = await authorLinkEl.getAttribute('href');
+                                if (href) {
+                                    authorUrl = 'https://www.facebook.com' + href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                }
                                 console.log(`      -> Author: ${authorName}`);
                                 trackStrategy('author', 'single_author_fallback'); // ✅ TAMBAH
                             }
@@ -5499,7 +5545,7 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                     // ✅ HYBRID MODE: Prepare HTML data
                     let htmlData = {
                         author: authorName,
-                        author_url: 'N/A', // Will be filled by GraphQL if available
+                        author_url: authorUrl, // ✅ UPDATED: Extract from DOM href attribute
                         author_followers: 0, // Will be filled by GraphQL if available
                         location: location,
                         timestamp: postTimestamp,
