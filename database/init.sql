@@ -1,6 +1,20 @@
 -- Facebook Data Analytics Database Schema
 -- Auto-created on container startup
 
+-- ========================================
+-- CREATE DATABASE USER (if not exists)
+-- ========================================
+-- Note: This is usually created by POSTGRES_USER env var,
+-- but we add it here as backup
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'fbadmin') THEN
+        CREATE ROLE fbadmin WITH LOGIN PASSWORD 'fbpass123';
+        ALTER ROLE fbadmin CREATEDB;
+    END IF;
+END
+$$;
+
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -75,6 +89,7 @@ CREATE TABLE IF NOT EXISTS comments (
 
     -- Metadata
     data_source VARCHAR(50) DEFAULT 'html',
+    parent_comment_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -167,11 +182,14 @@ CREATE INDEX IF NOT EXISTS idx_posts_year ON posts(filter_year);
 CREATE INDEX IF NOT EXISTS idx_posts_scraped ON posts(scraped_at);
 CREATE INDEX IF NOT EXISTS idx_posts_reactions ON posts(reactions DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_engagement ON posts((reactions + comments + shares) DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_url ON posts(post_url);
+CREATE INDEX IF NOT EXISTS idx_posts_share_url ON posts(share_url);
 
 -- Comments indexes
 CREATE INDEX IF NOT EXISTS idx_comments_post_url ON comments(post_url);
 CREATE INDEX IF NOT EXISTS idx_comments_author ON comments(comment_author);
 CREATE INDEX IF NOT EXISTS idx_comments_reactions ON comments(comment_reactions DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_id ON comments(comment_id);
 
 -- ========================================
 -- FUNCTIONS
@@ -189,17 +207,20 @@ BEGIN
     UNION ALL
     SELECT 'Total Comments'::VARCHAR, COUNT(*)::BIGINT FROM comments
     UNION ALL
-    SELECT 'Total Reactions'::VARCHAR, SUM(reactions)::BIGINT FROM posts
+    SELECT 'Total Reactions'::VARCHAR, COALESCE(SUM(reactions), 0)::BIGINT FROM posts
     UNION ALL
-    SELECT 'Total Shares'::VARCHAR, SUM(shares)::BIGINT FROM posts
+    SELECT 'Total Shares'::VARCHAR, COALESCE(SUM(shares), 0)::BIGINT FROM posts
     UNION ALL
-    SELECT 'Unique Authors'::VARCHAR, COUNT(DISTINCT author)::BIGINT FROM posts
+    SELECT 'Unique Authors'::VARCHAR, COUNT(DISTINCT author)::BIGINT FROM posts WHERE author IS NOT NULL
     UNION ALL
     SELECT 'Posts with Images'::VARCHAR, COUNT(*)::BIGINT FROM posts WHERE has_image = TRUE;
 END;
 $$ LANGUAGE plpgsql;
 
--- Grant permissions
+-- ========================================
+-- GRANT PERMISSIONS
+-- ========================================
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO fbadmin;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO fbadmin;
 GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO fbadmin;
+GRANT ALL PRIVILEGES ON DATABASE facebook_data TO fbadmin;
