@@ -2237,7 +2237,20 @@ async function extractCommentsFromDialog(page, postUrl, postAuthor) {
             });
 
             comments.push(...newCommentsOnly);
+
+            // ✅ FIX: Limit comments to MAX_COMMENTS_PER_POST
+            if (comments.length > CONFIG.MAX_COMMENTS_PER_POST) {
+                comments = comments.slice(0, CONFIG.MAX_COMMENTS_PER_POST);
+                console.log(`         ✅ Reached MAX limit (${CONFIG.MAX_COMMENTS_PER_POST}), truncating...`);
+            }
+
             const currentCount = comments.length;
+
+            // ✅ FIX: Break if we've reached the limit
+            if (currentCount >= CONFIG.MAX_COMMENTS_PER_POST) {
+                console.log(`         ✅ Reached MAX_COMMENTS_PER_POST (${CONFIG.MAX_COMMENTS_PER_POST}), stopping...`);
+                break;
+            }
 
             if (currentCount === previousCount) {
                 sameCountTimes++;
@@ -5329,7 +5342,16 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                 // ✅ Extract author URL from href
                                 const href = await authorLinkEl.getAttribute('href');
                                 if (href) {
-                                    authorUrl = 'https://www.facebook.com' + href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                    // Clean URL and remove tracking parameters
+                                    let cleanHref = href.split('?')[0].split('&__cft__')[0].split('&__tn__')[0];
+                                    // ✅ FIX: Check if URL is already full URL or relative
+                                    if (cleanHref.startsWith('http://') || cleanHref.startsWith('https://')) {
+                                        // Already full URL, just use it
+                                        authorUrl = cleanHref;
+                                    } else {
+                                        // Relative URL, add facebook.com prefix
+                                        authorUrl = 'https://www.facebook.com' + cleanHref;
+                                    }
                                 }
                                 console.log(`      -> Author: ${authorName}`);
                                 trackStrategy('author', 'single_author_fallback'); // ✅ TAMBAH
