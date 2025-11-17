@@ -18,8 +18,8 @@ const pool = new Pool({
     database: process.env.DB_NAME || 'facebook_data',
 });
 
-// ✅ Updated: Point to facebook_data folder in project root
-const DATA_FOLDER = path.join(__dirname, '..', 'facebook_data');
+// ✅ Updated: Point to facebook_data folder (mounted as /app/data in Docker)
+const DATA_FOLDER = path.join(__dirname, 'data');
 
 /**
  * Import Posts from CSV
