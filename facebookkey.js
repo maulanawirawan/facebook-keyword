@@ -2323,10 +2323,21 @@ async function extractCommentsFromDialog(page, postUrl, postAuthor) {
             comment.post_url = postUrl;
         }
 
+        // ✅ CLOSE DIALOG after extraction (Act Like Human!)
+        await closeCommentDialog(page);
+
         return comments;
 
     } catch (error) {
         console.warn(`      ⚠️ Dialog extraction error: ${error.message.substring(0, 50)}`);
+
+        // ✅ CLOSE DIALOG even on error
+        try {
+            await closeCommentDialog(page);
+        } catch (e) {
+            console.warn(`         ⚠️ Could not close dialog on error`);
+        }
+
         return [];
     }
 }
@@ -2397,34 +2408,8 @@ async function extractCommentsFromHTML(page, postEl, postUrl, postAuthor) {
         // ✅ CRITICAL: Always close dialog, even if there's an error
         if (dialogOpened) {
             try {
-                console.log(`      🔄 Closing comment dialog...`);
-
-                // Strategy 1: Close button
-                const closeBtn = page.locator('div[role="dialog"] div[aria-label="Close"]').first();
-                if (await closeBtn.count() > 0) {
-                    await closeBtn.click({ timeout: 3000 });
-                    await page.waitForTimeout(1000);
-                    console.log(`      ✅ Dialog closed via Close button`);
-                } else {
-                    // Strategy 2: Press Escape
-                    await page.keyboard.press('Escape');
-                    await page.waitForTimeout(1000);
-                    console.log(`      ✅ Dialog closed via Escape key`);
-                }
-
-                // Verify dialog is closed
-                const stillOpen = await page.locator('div[role="dialog"]').count();
-                if (stillOpen > 0) {
-                    // Strategy 3: Click outside dialog (backdrop)
-                    await page.mouse.click(10, 10);
-                    await page.waitForTimeout(500);
-
-                    // Strategy 4: Force Escape again
-                    await page.keyboard.press('Escape');
-                    await page.waitForTimeout(500);
-                    console.log(`      ⚠️ Dialog still open, forced close with multiple attempts`);
-                }
-
+                // Use the unified closeCommentDialog function
+                await closeCommentDialog(page);
             } catch (closeError) {
                 console.warn(`      ⚠️ Error closing dialog: ${closeError.message}`);
                 // Last resort: Press Escape multiple times
@@ -2442,6 +2427,104 @@ async function extractCommentsFromHTML(page, postEl, postUrl, postAuthor) {
 }
 
 /**
+ * ✅ NEW: Close Comment Dialog (Act Like Human)
+ * Clicks the X button to close the comment dialog
+ */
+async function closeCommentDialog(page) {
+    try {
+        console.log(`      🔲 Closing comment dialog...`);
+
+        // Strategy 1: Click close button (X button) - ACT LIKE HUMAN
+        const closeButtonSelectors = [
+            // Priority 1: Exact from user's HTML (aria-label="Close")
+            'div[role="dialog"] div[aria-label="Close"][role="button"]',
+            // Priority 2: Without dialog parent
+            'div[aria-label="Close"][role="button"]',
+            // Priority 3: SVG path inside close button
+            'div[role="dialog"] div[role="button"]:has(svg path[d*="19.884"])',
+            // Priority 4: Generic close button patterns
+            'div[role="dialog"] div[role="button"][aria-label*="lose"]',
+        ];
+
+        let closed = false;
+
+        for (const selector of closeButtonSelectors) {
+            try {
+                const closeBtn = page.locator(selector).first();
+
+                if (await closeBtn.count() > 0) {
+                    console.log(`         -> Found close button with: ${selector.substring(0, 60)}...`);
+
+                    // Scroll into view
+                    await closeBtn.scrollIntoViewIfNeeded().catch(() => {});
+                    await page.waitForTimeout(300);
+
+                    // Try multiple click methods (act like human)
+                    try {
+                        await closeBtn.click({ timeout: 3000 });
+                        closed = true;
+                    } catch (e1) {
+                        try {
+                            await closeBtn.click({ force: true, timeout: 3000 });
+                            closed = true;
+                        } catch (e2) {
+                            await closeBtn.evaluate(el => el.click());
+                            closed = true;
+                        }
+                    }
+
+                    if (closed) {
+                        await page.waitForTimeout(500);
+                        console.log(`         ✅ Dialog closed via X button`);
+
+                        // Verify dialog is gone
+                        const dialogStillExists = await page.locator('div[role="dialog"]').count() > 0;
+                        if (!dialogStillExists) {
+                            return true;
+                        } else {
+                            console.log(`         ⚠️ Dialog still exists after click, trying next method...`);
+                            closed = false;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log(`         -> Close button selector failed: ${e.message.substring(0, 40)}`);
+                continue;
+            }
+        }
+
+        // Strategy 2: Press Escape key (fallback)
+        if (!closed) {
+            console.log(`         -> Using Escape key fallback...`);
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(500);
+
+            const dialogStillExists = await page.locator('div[role="dialog"]').count() > 0;
+            if (!dialogStillExists) {
+                console.log(`         ✅ Dialog closed via Escape key`);
+                return true;
+            }
+
+            // Double escape (sometimes needed)
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(500);
+            console.log(`         ✅ Dialog closed via double Escape`);
+            return true;
+        }
+
+        return closed;
+    } catch (error) {
+        console.warn(`         ⚠️ Error closing dialog: ${error.message.substring(0, 50)}`);
+        // Last resort: force escape
+        try {
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+        } catch (e) {}
+        return false;
+    }
+}
+
+/**
  * ✅ Extract All Comments - Hybrid Mode (GraphQL first, HTML fallback)
  */
 async function extractAllCommentsHybrid(page, postEl, postUrl, postAuthor, postId) {
@@ -2452,6 +2535,14 @@ async function extractAllCommentsHybrid(page, postEl, postUrl, postAuthor, postI
     let comments = [];
     let graphqlResponse = null;
     let dialogOpened = false;
+
+    // ✅ STEP 0: Check and close any existing dialog from previous post
+    const existingDialog = await page.locator('div[role="dialog"]').count();
+    if (existingDialog > 0) {
+        console.log(`      ⚠️  Found open dialog from previous post, closing...`);
+        await closeCommentDialog(page);
+        await page.waitForTimeout(500); // Extra wait for dialog to fully close
+    }
 
     // ✅ STEP 1: Try to open comment dialog to trigger GraphQL request
     if (CONFIG.PREFER_GRAPHQL) {
