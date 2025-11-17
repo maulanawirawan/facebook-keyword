@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "import": "node ../database/import.js"
+    "import": "node import.js"
   },
   "keywords": ["facebook", "analytics", "api", "express"],
   "author": "",
