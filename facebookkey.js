@@ -5863,7 +5863,7 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                                 await saveCommentsRealtimeJSON(extractedComments, commentFilenameJSON);
 
                                 // ✅ AUTO-SAVE TO DATABASE
-                                if (CONFIG.AUTO_SAVE_TO_DATABASE && isDatabaseAvailable) {
+                                if (CONFIG.AUTO_SAVE_TO_DATABASE && isApiAvailable) {
                                     const savedCount = await saveCommentsToDatabase(extractedComments);
                                     if (savedCount > 0) {
                                         console.log(`      🗄️  Auto-saved ${savedCount} comments to PostgreSQL`);
@@ -6020,7 +6020,7 @@ async function savePostRealtime(post, postFile) {
         await savePostsRealtimeJSON([post], postFileJSON);
 
         // ✅ AUTO-SAVE TO DATABASE
-        if (CONFIG.AUTO_SAVE_TO_DATABASE && isDatabaseAvailable) {
+        if (CONFIG.AUTO_SAVE_TO_DATABASE && isApiAvailable) {
             const dbSaved = await savePostToDatabase(post);
             if (dbSaved) {
                 console.log(`      🗄️  Auto-saved to PostgreSQL database`);
