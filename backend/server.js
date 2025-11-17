@@ -392,6 +392,38 @@ app.delete('/api/cleanup/sample', async (req, res) => {
     }
 });
 
+// ✅ Delete ALL data (fresh start)
+app.delete('/api/cleanup/all', async (req, res) => {
+    try {
+        console.log('🗑️  Cleaning ALL data from database...');
+
+        // Delete comments first (foreign key constraint)
+        const commentsResult = await pool.query('DELETE FROM comments');
+        console.log(`   ✓ Deleted ${commentsResult.rowCount} comments`);
+
+        // Delete posts
+        const postsResult = await pool.query('DELETE FROM posts');
+        console.log(`   ✓ Deleted ${postsResult.rowCount} posts`);
+
+        // Reset sequences (auto-increment IDs)
+        await pool.query('ALTER SEQUENCE IF EXISTS posts_id_seq RESTART WITH 1');
+        await pool.query('ALTER SEQUENCE IF EXISTS comments_id_seq RESTART WITH 1');
+        console.log(`   ✓ Reset ID sequences`);
+
+        res.json({
+            status: 'success',
+            message: 'All data deleted successfully',
+            deleted: {
+                posts: postsResult.rowCount,
+                comments: commentsResult.rowCount
+            }
+        });
+    } catch (error) {
+        console.error('❌ Cleanup error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Trigger data import from CSV/JSON files
 app.post('/api/import', async (req, res) => {
     try {
@@ -475,6 +507,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('   GET    /api/analytics/trends   - Engagement trends');
     console.log('   POST   /api/import             - Trigger data import (CSV/JSON)');
     console.log('   DELETE /api/cleanup/sample     - Delete sample/test data');
+    console.log('   DELETE /api/cleanup/all        - Delete ALL data (fresh start)');
     console.log('');
 });
 
