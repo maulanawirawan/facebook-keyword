@@ -1435,7 +1435,7 @@
                                 <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
                                 <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
                                 <td>
-                                    ${post.post_url ? `<a href="${post.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View Post</a>` : 'N/A'}
+                                    ${(post.share_url || post.post_url) ? `<a href="${post.share_url || post.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View Post</a>` : 'N/A'}
                                 </td>
                             </tr>
                         `).join('')}
@@ -1655,7 +1655,7 @@
                 post.reactions || 0,
                 post.comments || 0,
                 post.shares || 0,
-                post.post_url || ''
+                post.share_url || post.post_url || ''
             ]);
 
             let csv = headers.join(',') + '\n';
