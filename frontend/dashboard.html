@@ -619,7 +619,7 @@
         <header>
             <div class="header-left">
                 <h1>📊 Facebook Analytics Dashboard</h1>
-                <p class="subtitle">Advanced data visualization with interactive features</p>
+                <p class="subtitle">Real-time social media analytics and reporting</p>
                 <p class="subtitle" style="margin-top: 8px;">
                     <span id="refreshStatus" style="display: inline-flex; align-items: center; gap: 5px;">
                         <i class="fas fa-circle" style="color: #22c55e; font-size: 8px; animation: pulse 2s infinite;"></i>
@@ -781,6 +781,15 @@
             return `http://${hostname}:3002`;
         };
         const API_URL = getApiUrl();
+
+        // Cache busting - add timestamp to API calls to ensure fresh data
+        const cacheBuster = () => `_t=${Date.now()}`;
+
+        // Helper function for API calls with cache busting
+        const apiFetch = (endpoint) => {
+            const separator = endpoint.includes('?') ? '&' : '?';
+            return fetch(`${API_URL}${endpoint}${separator}${cacheBuster()}`);
+        };
         let charts = {};
         let allPosts = [];
         let allComments = [];
@@ -908,7 +917,7 @@
         // Load statistics
         async function loadStats() {
             try {
-                const response = await fetch(`${API_URL}/api/stats`);
+                const response = await fetch(`${API_URL}/api/stats?${cacheBuster()}`);
                 const data = await response.json();
 
                 const statsHTML = `
@@ -1274,8 +1283,8 @@
             try {
                 // Fetch both posts and comments
                 const [postsResponse, commentsResponse] = await Promise.all([
-                    fetch(`${API_URL}/api/posts/top/engagement?limit=200`),
-                    fetch(`${API_URL}/api/comments?limit=500`)
+                    apiFetch('/api/posts/top/engagement?limit=200'),
+                    apiFetch('/api/comments?limit=500')
                 ]);
 
                 const postsData = await postsResponse.json();
@@ -1382,7 +1391,7 @@
         // Load posts with clickable links
         async function loadPosts() {
             try {
-                const response = await fetch(`${API_URL}/api/posts/top/engagement?limit=50`);
+                const response = await apiFetch('/api/posts/top/engagement?limit=50');
                 const data = await response.json();
                 allPosts = data;
 
@@ -1450,7 +1459,7 @@
         // Load comments
         async function loadComments() {
             try {
-                const response = await fetch(`${API_URL}/api/comments?limit=50`);
+                const response = await apiFetch('/api/comments?limit=50');
                 const data = await response.json();
                 allComments = data.data || [];
 
