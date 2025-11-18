@@ -1,87 +1,95 @@
 @echo off
+chcp 65001 >nul
+cls
+echo.
 echo ====================================================
-echo  APPLY ALL DASHBOARD UPDATES
+echo   APPLY ALL DASHBOARD UPDATES
 echo ====================================================
 echo.
-echo This will:
+echo This will apply all latest improvements:
 echo   1. Pull latest changes from Git
-echo   2. Update database view with all fields
+echo   2. Update database view
 echo   3. Restart frontend container
-echo   4. Clear browser cache recommendation
+echo   4. Open dashboard
 echo.
 pause
+cls
 
 echo.
-echo [Step 1/4] Pulling latest changes from Git...
+echo Step 1: Pulling latest changes...
+echo.
 git pull origin claude/fix-docker-network-error-015S38gpeWWWie7U7bRMWS1D
+if errorlevel 1 (
+    echo ERROR: Git pull failed
+    pause
+    exit /b 1
+)
+
+echo.
+echo Step 2: Updating database view...
 echo.
 
-echo [Step 2/4] Updating database view...
+REM Create temp SQL file
 (
 echo CREATE OR REPLACE VIEW v_top_posts AS
-echo SELECT
-echo     id,
-echo     author,
-echo     author_url,
-echo     SUBSTRING^(text, 1, 200^) as text_preview,
-echo     text,
-echo     reactions,
-echo     comments,
-echo     shares,
-echo     views,
-echo     ^(reactions + comments * 2 + shares * 3^) as engagement_score,
-echo     post_url,
-echo     share_url,
-echo     image_url,
-echo     video_url,
-echo     has_image,
-echo     has_video,
-echo     location,
-echo     music_title,
-echo     music_artist,
-echo     timestamp,
-echo     timestamp_iso,
-echo     query_used,
-echo     filter_year
-echo FROM posts
-echo WHERE text IS NOT NULL
-echo ORDER BY engagement_score DESC
-echo LIMIT 100;
+echo SELECT id, author, author_url,
+echo SUBSTRING^(text, 1, 200^) as text_preview, text,
+echo reactions, comments, shares, views,
+echo ^(reactions + comments * 2 + shares * 3^) as engagement_score,
+echo post_url, share_url, image_url, video_url,
+echo has_image, has_video, location,
+echo music_title, music_artist,
+echo timestamp, timestamp_iso, query_used, filter_year
+echo FROM posts WHERE text IS NOT NULL
+echo ORDER BY engagement_score DESC LIMIT 100;
 ) > temp_update.sql
 
 docker exec -i facebook-postgres psql -U fbadmin -d facebook_data < temp_update.sql
+if errorlevel 1 (
+    echo ERROR: Database update failed
+    del temp_update.sql
+    pause
+    exit /b 1
+)
+
 del temp_update.sql
-echo.
+echo Database view updated successfully
 
-echo [Step 3/4] Restarting frontend container...
+echo.
+echo Step 3: Restarting frontend...
+echo.
 docker-compose restart frontend
-echo.
 
-echo [Step 4/4] Waiting for services to be ready...
+echo.
+echo Step 4: Waiting for services...
 timeout /t 5 >nul
-echo.
 
-echo ====================================================
-echo ✓ All updates applied successfully!
+cls
 echo.
-echo IMPORTANT: Clear your browser cache for best results
-echo   - Chrome/Edge: Ctrl+Shift+Delete
-echo   - Or use Incognito/Private mode
+echo ====================================================
+echo   ALL UPDATES APPLIED SUCCESSFULLY!
+echo ====================================================
+echo.
+echo IMPORTANT: Clear your browser cache
+echo   Chrome/Edge: Press Ctrl+Shift+Delete
+echo   Or use Incognito/Private mode
 echo.
 echo Dashboard URLs:
 echo   Local:  http://localhost:8081
 echo   Mobile: http://YOUR_IP:8081
 echo.
-echo What's new:
-echo   ✓ Simplified professional title
-echo   ✓ Fresh data loading (no cache)
-echo   ✓ Share URLs (clean facebook.com/share/p/xxx)
-echo   ✓ All database fields available
+echo Changes applied:
+echo   [OK] Simplified professional title
+echo   [OK] Fresh data loading (no cache)
+echo   [OK] Clean share URLs
+echo   [OK] All database fields
+echo.
 echo ====================================================
 echo.
 
-echo Opening dashboard...
-timeout /t 2 >nul
+echo Opening dashboard in 3 seconds...
+timeout /t 3 >nul
 start http://localhost:8081
 
+echo.
 pause
