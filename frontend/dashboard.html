@@ -771,7 +771,16 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        const API_URL = 'http://localhost:3002';
+        // Dynamic API URL - works with both localhost and LAN access
+        const getApiUrl = () => {
+            const hostname = window.location.hostname;
+            // If accessed via IP or domain, use that. Otherwise use localhost
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:3002';
+            }
+            return `http://${hostname}:3002`;
+        };
+        const API_URL = getApiUrl();
         let charts = {};
         let allPosts = [];
         let allComments = [];
@@ -1260,17 +1269,39 @@
             }
         }
 
-        // Word cloud from hashtags
+        // Word cloud from hashtags (posts + comments)
         async function createWordCloud() {
             try {
-                const response = await fetch(`${API_URL}/api/posts/top/engagement?limit=200`);
-                const data = await response.json();
+                // Fetch both posts and comments
+                const [postsResponse, commentsResponse] = await Promise.all([
+                    fetch(`${API_URL}/api/posts/top/engagement?limit=200`),
+                    fetch(`${API_URL}/api/comments?limit=500`)
+                ]);
 
-                // Extract hashtags from text
+                const postsData = await postsResponse.json();
+                const commentsData = await commentsResponse.json();
+                const comments = commentsData.data || [];
+
+                // Extract hashtags from posts and comments
                 const hashtagCounts = {};
-                data.forEach(post => {
+
+                // Extract from posts
+                postsData.forEach(post => {
                     if (post.text_preview) {
                         const hashtags = post.text_preview.match(/#[\w\u0080-\uFFFF]+/g);
+                        if (hashtags) {
+                            hashtags.forEach(tag => {
+                                const cleanTag = tag.toLowerCase();
+                                hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
+                            });
+                        }
+                    }
+                });
+
+                // Extract from comments
+                comments.forEach(comment => {
+                    if (comment.comment_text) {
+                        const hashtags = comment.comment_text.match(/#[\w\u0080-\uFFFF]+/g);
                         if (hashtags) {
                             hashtags.forEach(tag => {
                                 const cleanTag = tag.toLowerCase();
