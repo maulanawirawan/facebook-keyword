@@ -146,13 +146,27 @@ CREATE OR REPLACE VIEW v_top_posts AS
 SELECT
     id,
     author,
-    SUBSTRING(text, 1, 100) as text_preview,
+    author_url,
+    SUBSTRING(text, 1, 200) as text_preview,
+    text,
     reactions,
     comments,
     shares,
+    views,
     (reactions + comments * 2 + shares * 3) as engagement_score,
     post_url,
-    timestamp
+    share_url,
+    image_url,
+    video_url,
+    has_image,
+    has_video,
+    location,
+    music_title,
+    music_artist,
+    timestamp,
+    timestamp_iso,
+    query_used,
+    filter_year
 FROM posts
 WHERE text IS NOT NULL
 ORDER BY engagement_score DESC
