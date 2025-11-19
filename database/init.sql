@@ -220,7 +220,9 @@ BEGIN
     RETURN QUERY
     SELECT 'Total Posts'::VARCHAR, COUNT(*)::BIGINT FROM posts
     UNION ALL
-    SELECT 'Total Comments'::VARCHAR, COUNT(*)::BIGINT FROM comments
+    SELECT 'Total Comments'::VARCHAR, COALESCE(SUM(comments), 0)::BIGINT FROM posts
+    UNION ALL
+    SELECT 'Extracted Comments'::VARCHAR, COUNT(*)::BIGINT FROM comments
     UNION ALL
     SELECT 'Total Reactions'::VARCHAR, COALESCE(SUM(reactions), 0)::BIGINT FROM posts
     UNION ALL
