@@ -19,7 +19,10 @@ const pool = new Pool({
 });
 
 // ✅ Updated: Point to facebook_data folder (mounted as /app/data in Docker)
-const DATA_FOLDER = path.join(__dirname, 'data');
+// In Docker: /app/data, Local: ../facebook_data
+const DATA_FOLDER = process.env.NODE_ENV === 'production' || process.env.DOCKER
+    ? '/app/data'
+    : path.join(__dirname, '..', 'facebook_data');
 
 /**
  * Import Posts from CSV
