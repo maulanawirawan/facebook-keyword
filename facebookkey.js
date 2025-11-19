@@ -100,23 +100,60 @@ const CONFIG = {
     API_TIMEOUT: 10000, // 10 seconds timeout for API requests
 };
 
-// ✅ API Connection Check
+// ✅ SMART API CONNECTION CHECK - Auto-detect & Fallback
 let isApiAvailable = false;
 
-if (CONFIG.AUTO_SAVE_TO_DATABASE) {
-    // Test API connection on startup
-    axios.get(`${CONFIG.API_BASE_URL}/health`, { timeout: 5000 })
-        .then(response => {
+/**
+ * Smart API Detection - Try multiple URLs with fallback
+ * Supports: localhost, 127.0.0.1, LAN IP, custom ports
+ */
+async function detectApiConnection() {
+    if (!CONFIG.AUTO_SAVE_TO_DATABASE) {
+        return false;
+    }
+
+    // Get port from env or use default
+    const apiPort = process.env.API_PORT || '3002';
+
+    // Try multiple URL candidates in priority order
+    const urlCandidates = [
+        `http://127.0.0.1:${apiPort}`,      // IPv4 localhost (most reliable)
+        `http://localhost:${apiPort}`,       // System localhost (may use IPv6)
+        process.env.API_BASE_URL,            // User-defined URL from .env
+    ].filter(Boolean); // Remove undefined
+
+    console.log('🔍 Detecting API connection...');
+
+    for (const url of urlCandidates) {
+        try {
+            const response = await axios.get(`${url}/health`, {
+                timeout: 3000,
+                family: 4 // Force IPv4
+            });
+
+            // Success! Update config and return
+            CONFIG.API_BASE_URL = url;
             console.log('✅ API connected:', response.data.database);
-            console.log(`   API URL: ${CONFIG.API_BASE_URL}`);
-            isApiAvailable = true;
-        })
-        .catch(err => {
-            console.error('❌ API connection failed:', err.message);
-            console.log('   ⚠️  Will save to CSV only (API disabled)');
-            console.log(`   ⚠️  Make sure backend is running: docker-compose up -d api`);
-            isApiAvailable = false;
-        });
+            console.log(`   API URL: ${url}`);
+            return true;
+        } catch (err) {
+            // Try next candidate
+            continue;
+        }
+    }
+
+    // All candidates failed
+    console.error('❌ API connection failed - tried:', urlCandidates.join(', '));
+    console.log('   ⚠️  Will save to CSV only (API disabled)');
+    console.log(`   ⚠️  Make sure backend is running: docker-compose up -d api`);
+    return false;
+}
+
+// Run API detection on startup
+if (CONFIG.AUTO_SAVE_TO_DATABASE) {
+    detectApiConnection().then(available => {
+        isApiAvailable = available;
+    });
 }
 
 let isJobRunning = false;
@@ -7652,63 +7689,36 @@ async function main() {
         console.log(`${"─".repeat(70)}\n`);
 
         // ✅ AUTO-IMPORT ke Database
-        try {
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('📥 AUTO-IMPORT: Triggering database import...');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        if (isApiAvailable) {
+            try {
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('📥 AUTO-IMPORT: Triggering database import...');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-            const http = require('http');
+                const importResponse = await axios.post(
+                    `${CONFIG.API_BASE_URL}/api/import`,
+                    {},
+                    {
+                        timeout: 60000, // 60 seconds for import
+                        family: 4 // Force IPv4
+                    }
+                );
 
-            const importRequest = http.request({
-                hostname: 'localhost',
-                port: 3002,
-                path: '/api/import',
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }, (res) => {
-                let data = '';
+                console.log('   ✅ Import completed successfully!');
+                console.log('\n📊 Dashboard will auto-refresh in 30 seconds');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-                res.on('data', (chunk) => {
-                    data += chunk;
-                    // Print streaming response
-                    try {
-                        const lines = data.split('\n').filter(l => l.trim());
-                        lines.forEach(line => {
-                            try {
-                                const json = JSON.parse(line);
-                                if (json.status === 'started') {
-                                    console.log('   📤 Import started...');
-                                } else if (json.status === 'completed') {
-                                    console.log('   ✅ Import completed successfully!');
-                                } else if (json.status === 'error') {
-                                    console.log(`   ❌ Import error: ${json.message}`);
-                                }
-                            } catch (e) {}
-                        });
-                    } catch (e) {}
-                });
-
-                res.on('end', () => {
-                    console.log('\n📊 Dashboard will auto-refresh in 30 seconds');
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-                });
-            });
-
-            importRequest.on('error', (error) => {
-                console.log(`   ⚠️  Auto-import failed: ${error.message}`);
+            } catch (err) {
+                console.log(`   ⚠️  Auto-import failed: ${err.message}`);
                 console.log(`   💡 TIP: Make sure Docker containers are running (docker-compose up -d)`);
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-            });
-
-            importRequest.end();
-
-            // Wait for import to complete (max 10 seconds)
-            await new Promise(resolve => setTimeout(resolve, 10000));
-
-        } catch (err) {
-            console.log(`   ⚠️  Auto-import error: ${err.message}\n`);
+            }
+        } else {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('⚠️  AUTO-IMPORT SKIPPED: API not available');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('   💡 Run manually: docker exec facebook-api node import.js');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         }
 
         await new Promise(resolve => setTimeout(resolve, jedaSiklus));
