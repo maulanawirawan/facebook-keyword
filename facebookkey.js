@@ -5856,6 +5856,11 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                     // ========== ✅ MARK AS SCRAPED - MULTIPLE KEYS ==========
                     allScrapedUrls.add(postUrl);
 
+                    // ✅ Add share_url for reliable duplicate detection
+                    if (shareUrl && shareUrl !== "N/A") {
+                        allScrapedUrls.add(shareUrl);
+                    }
+
                     if (postId) {
                         allScrapedUrls.add(`postid:${postId}`);
                     }
