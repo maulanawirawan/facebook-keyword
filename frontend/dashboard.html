@@ -762,6 +762,7 @@
     <div class="api-status">
         <span class="status-dot status-offline" id="statusDot"></span>
         <span id="statusText">Connecting to API...</span>
+        <span id="networkInfo" style="margin-left: 15px; opacity: 0.8; font-size: 0.9em;"></span>
     </div>
 
     <button class="back-to-top" id="backToTop" onclick="scrollToTop()">
@@ -898,7 +899,7 @@
             event.target.classList.add('active');
         }
 
-        // Check API health
+        // Check API health and display network info
         async function checkAPIHealth() {
             try {
                 const response = await fetch(`${API_URL}/health`);
@@ -906,12 +907,37 @@
 
                 document.getElementById('statusDot').className = 'status-dot status-online';
                 document.getElementById('statusText').textContent = 'API Connected';
+
+                // Display network info for sharing
+                const hostname = window.location.hostname;
+                const port = window.location.port || '8081';
+                const protocol = window.location.protocol;
+
+                if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                    // Accessed from network, show shareable URL
+                    const shareUrl = `${protocol}//${hostname}:${port}`;
+                    document.getElementById('networkInfo').innerHTML =
+                        `• Share URL: <a href="${shareUrl}" style="color: #667eea; text-decoration: underline;" onclick="copyToClipboard('${shareUrl}'); return false;">${shareUrl}</a>`;
+                } else {
+                    // Accessed locally, show hint
+                    document.getElementById('networkInfo').innerHTML =
+                        `• <span style="opacity: 0.7;">Access from mobile: http://YOUR_IP:8081</span>`;
+                }
+
                 return true;
             } catch (error) {
                 document.getElementById('statusDot').className = 'status-dot status-offline';
                 document.getElementById('statusText').textContent = 'API Offline';
+                document.getElementById('networkInfo').textContent = '';
                 return false;
             }
+        }
+
+        // Copy to clipboard helper
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('URL copied to clipboard!');
+            });
         }
 
         // Load statistics
