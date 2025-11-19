@@ -91,6 +91,13 @@ const CONFIG = {
     SCREENSHOT_DIR: './screenshots',
     MAX_SCREENSHOTS: 50,         // Keep last 50 screenshots only
 
+    // ✅ NEW: RECENT POSTS UPDATE SETTINGS
+    UPDATE_RECENT_POSTS: true,           // Enable auto-update after scraping
+    UPDATE_RECENT_DAYS: 30,              // Only update posts from last N days
+    UPDATE_RECENT_DELAY_MS: 5000,        // Delay between updates (5 seconds)
+    UPDATE_RECENT_SHOW_DELTA: true,      // Show delta in console (+100, -50, etc)
+    UPDATE_ERROR_DIR: './update_errors', // Error screenshots folder
+
     // ✅ ZOOM SETTING - untuk timestamp dan layout issues
     PAGE_ZOOM: 0.5,              // 50% zoom (0.5 = 50%, 1.0 = 100%)
 
@@ -6157,6 +6164,256 @@ async function saveData(posts, postFile) {
 }
 
 /**
+ * ✅ NEW: Update Recent Posts Engagement (Sequential, Share URL Only)
+ *
+ * Updates engagement for recent posts (last 30 days) after scraping
+ * - ONLY uses share_url (reliable, no fbid URLs)
+ * - Updates oldest posts first (sequential, no random)
+ * - Shows delta (+/-) for each metric
+ * - Tracks update_count and last_updated_at
+ *
+ * @param {Page} page - Playwright page instance
+ * @param {number} recentScrapedCount - Number of posts just scraped
+ * @returns {Promise<{updated: number, failed: number, skipped: number}>}
+ */
+async function updateRecentPostsEngagement(page, recentScrapedCount) {
+    console.log(`\n🔄 UPDATE ENGAGEMENT - Recent Posts (Last ${CONFIG.UPDATE_RECENT_DAYS} Days)`);
+    console.log(`   Target: Update ${recentScrapedCount} oldest posts`);
+
+    const csvFile = path.join(CONFIG.csv_base_folder, CONFIG.csv_recent_filename);
+
+    if (!fs.existsSync(csvFile)) {
+        console.log(`   ℹ️  No recent_posts.csv found, skipping update`);
+        return { updated: 0, failed: 0, skipped: 0 };
+    }
+
+    // ========== LOAD POSTS ==========
+    const posts = [];
+    await new Promise((resolve) => {
+        fs.createReadStream(csvFile)
+            .pipe(csvParser())
+            .on('data', (row) => posts.push(row))
+            .on('end', resolve);
+    });
+
+    if (posts.length === 0) {
+        console.log(`   ℹ️  No posts to update`);
+        return { updated: 0, failed: 0, skipped: 0 };
+    }
+
+    console.log(`   📂 Loaded: ${posts.length} posts from recent_posts.csv`);
+
+    // ========== FILTER: Last 30 Days ==========
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - CONFIG.UPDATE_RECENT_DAYS);
+
+    const recentPosts = posts.filter(post => {
+        const scrapedAt = post.scraped_at ? new Date(post.scraped_at) : null;
+        return scrapedAt && scrapedAt >= cutoffDate;
+    });
+
+    console.log(`   📅 Last ${CONFIG.UPDATE_RECENT_DAYS} days: ${recentPosts.length} posts`);
+
+    // ========== SORT: Oldest First ==========
+    recentPosts.sort((a, b) => {
+        const dateA = a.scraped_at ? new Date(a.scraped_at) : new Date(0);
+        const dateB = b.scraped_at ? new Date(b.scraped_at) : new Date(0);
+        return dateA - dateB; // Oldest first
+    });
+
+    // ========== SELECT: First N Posts ==========
+    const postsToUpdate = recentPosts.slice(0, recentScrapedCount);
+    console.log(`   🎯 Will update: ${postsToUpdate.length} posts (oldest first)\n`);
+    console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
+    // ========== UPDATE LOOP ==========
+    let updatedCount = 0;
+    let failedCount = 0;
+    let skippedCount = 0;
+
+    // Create error folder if needed
+    if (!fs.existsSync(CONFIG.UPDATE_ERROR_DIR)) {
+        fs.mkdirSync(CONFIG.UPDATE_ERROR_DIR, { recursive: true });
+    }
+
+    for (let i = 0; i < postsToUpdate.length; i++) {
+        const post = postsToUpdate[i];
+
+        try {
+            // Calculate post age
+            const scrapedAt = post.scraped_at ? new Date(post.scraped_at) : null;
+            const daysAgo = scrapedAt ? Math.floor((Date.now() - scrapedAt.getTime()) / (1000 * 60 * 60 * 24)) : '?';
+
+            console.log(`   [${i + 1}/${postsToUpdate.length}] 📍 ${post.author || 'Unknown'} - ${daysAgo} days ago`);
+
+            // ========== URL VALIDATION: Share URL Only ==========
+            if (!post.share_url || post.share_url === "N/A" || post.share_url === "") {
+                console.log(`      ⏭️  Skipping: No reliable share_url`);
+                skippedCount++;
+                continue;
+            }
+
+            // Validate URL format (must be /share/ or /reel/)
+            if (!post.share_url.includes('facebook.com/share/') && !post.share_url.includes('facebook.com/reel/')) {
+                console.log(`      ⚠️  Invalid share_url format (not /share/ or /reel/)`);
+                console.log(`         URL: ${post.share_url.substring(0, 60)}...`);
+                skippedCount++;
+                continue;
+            }
+
+            const updateUrl = post.share_url;
+            console.log(`      → Opening: ${updateUrl.substring(0, 80)}...`);
+
+            // ========== OPEN PAGE ==========
+            const gotoResult = await page.goto(updateUrl, {
+                waitUntil: 'domcontentloaded',
+                timeout: 30000
+            }).catch((err) => {
+                console.warn(`      ⚠️  Page load error: ${err.message.substring(0, 40)}`);
+                return null;
+            });
+
+            if (!gotoResult) {
+                failedCount++;
+                continue;
+            }
+
+            await page.waitForTimeout(2000 + Math.random() * 1000);
+
+            // ========== EXTRACT NEW ENGAGEMENT ==========
+            console.log(`      → Extracting engagement...`);
+
+            // Get post element (assume first post on page)
+            const postEl = page.locator('div[role="article"]').first();
+
+            if (await postEl.count() === 0) {
+                console.log(`      ⚠️  No post element found`);
+                failedCount++;
+                continue;
+            }
+
+            // Extract new values
+            const newReactions = await extractReactions(postEl, page, 1, false);
+            const newComments = await extractComments(postEl, page, 1, false);
+            const newShares = await extractShares(postEl, page, 1, false);
+
+            // Extract views (only for videos)
+            let newViews = 0;
+            if (updateUrl.includes('/reel/') || updateUrl.includes('/watch/')) {
+                newViews = await extractViews(postEl);
+                if (newViews === 0) {
+                    newViews = await extractVideoViewsFromPage(page.context(), updateUrl);
+                }
+            }
+
+            // ========== VALIDATION ==========
+            if (newReactions === 0 && newComments === 0 && newShares === 0 && newViews === 0) {
+                console.log(`      ⚠️  Extraction failed: All metrics are 0`);
+                console.log(`      → Keeping old values`);
+
+                // Save error screenshot
+                try {
+                    const errorPath = path.join(CONFIG.UPDATE_ERROR_DIR, `error_${Date.now()}.png`);
+                    await page.screenshot({ path: errorPath, fullPage: true });
+                    console.log(`      📸 Screenshot saved: ${errorPath}`);
+                } catch (e) {}
+
+                failedCount++;
+                continue;
+            }
+
+            // ========== CALCULATE DELTA ==========
+            const oldReactions = parseInt(post.reactions || 0);
+            const oldComments = parseInt(post.comments || 0);
+            const oldShares = parseInt(post.shares || 0);
+            const oldViews = parseInt(post.views || 0);
+
+            const deltaReactions = newReactions - oldReactions;
+            const deltaComments = newComments - oldComments;
+            const deltaShares = newShares - oldShares;
+            const deltaViews = newViews - oldViews;
+
+            // ========== UPDATE POST DATA ==========
+            post.reactions = newReactions;
+            post.comments = newComments;
+            post.shares = newShares;
+            post.views = newViews;
+            post.update_count = (parseInt(post.update_count || 0)) + 1;
+            post.last_updated_at = new Date().toISOString();
+            post.updated_at = new Date().toISOString();
+
+            // ========== DISPLAY WITH DELTA ==========
+            if (CONFIG.UPDATE_RECENT_SHOW_DELTA) {
+                const formatDelta = (delta) => {
+                    if (delta > 0) return `\x1b[32m+${delta.toLocaleString()}\x1b[0m`;      // Green
+                    if (delta < 0) return `\x1b[31m${delta.toLocaleString()}\x1b[0m`;        // Red
+                    return `\x1b[33m±0\x1b[0m`;                              // Yellow
+                };
+
+                console.log(`      → OLD: R:${oldReactions.toLocaleString().padStart(6)}  C:${oldComments.toLocaleString().padStart(5)}  S:${oldShares.toLocaleString().padStart(5)}  V:${oldViews.toLocaleString().padStart(7)}`);
+                console.log(`      → NEW: R:${newReactions.toLocaleString().padStart(6)}  C:${newComments.toLocaleString().padStart(5)}  S:${newShares.toLocaleString().padStart(5)}  V:${newViews.toLocaleString().padStart(7)}`);
+                console.log(`      ✅ R:${newReactions.toLocaleString()} (${formatDelta(deltaReactions)}) C:${newComments.toLocaleString()} (${formatDelta(deltaComments)}) S:${newShares.toLocaleString()} (${formatDelta(deltaShares)}) ${newViews > 0 ? `V:${newViews.toLocaleString()} (${formatDelta(deltaViews)})` : ''} [Update #${post.update_count}]`);
+            } else {
+                console.log(`      ✅ R:${newReactions.toLocaleString()} C:${newComments.toLocaleString()} S:${newShares.toLocaleString()} ${newViews > 0 ? `V:${newViews.toLocaleString()}` : ''} [Update #${post.update_count}]`);
+            }
+
+            updatedCount++;
+
+            // Delay before next post
+            await page.waitForTimeout(CONFIG.UPDATE_RECENT_DELAY_MS);
+
+        } catch (error) {
+            console.warn(`      ❌ Error: ${error.message}`);
+            failedCount++;
+        }
+
+        console.log(''); // Empty line between posts
+    }
+
+    console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
+    // ========== SAVE UPDATED CSV ==========
+    console.log(`   📊 UPDATE SUMMARY:`);
+    console.log(`      • Processed: ${postsToUpdate.length} posts`);
+    console.log(`      • Updated: ${updatedCount} posts`);
+    console.log(`      • Failed: ${failedCount} posts`);
+    console.log(`      • Skipped: ${skippedCount} posts (no valid share_url)`);
+
+    // Save to CSV
+    try {
+        const headers = Object.keys(posts[0]);
+
+        // Ensure new columns exist
+        if (!headers.includes('update_count')) {
+            posts.forEach(p => { if (!p.update_count) p.update_count = 0; });
+        }
+        if (!headers.includes('last_updated_at')) {
+            posts.forEach(p => { if (!p.last_updated_at) p.last_updated_at = ''; });
+        }
+
+        const csvWriter = createObjectCsvWriter({
+            path: csvFile,
+            header: headers.map(h => ({ id: h, title: h })),
+            alwaysQuote: true,
+            encoding: 'utf8'
+        });
+
+        await csvWriter.writeRecords(posts);
+        console.log(`\n   💾 Saved to: ${csvFile}`);
+        console.log(`      ✅ All changes written successfully\n`);
+
+    } catch (error) {
+        console.error(`   ❌ Failed to save CSV: ${error.message}`);
+    }
+
+    return {
+        updated: updatedCount,
+        failed: failedCount,
+        skipped: skippedCount
+    };
+}
+
+/**
  * ✅ SIMPLIFIED: Update Engagement - DIRECT OVERWRITE
  */
 async function updateEngagement(page, batchSize) {
@@ -7001,6 +7258,18 @@ async function runJob() {
 
                 const recentScraped = await scrapeFacebookSearch(queryPage, currentQuery, CONFIG.max_posts_recent, null);
                 totalScraped += recentScraped;
+
+                // ✅ NEW: Update recent posts engagement immediately after scraping
+                if (CONFIG.UPDATE_RECENT_POSTS && recentScraped > 0) {
+                    console.log(`\n🔄 Starting update for ${recentScraped} recent posts...`);
+
+                    try {
+                        const updateResult = await updateRecentPostsEngagement(queryPage, recentScraped);
+                        console.log(`✅ Update complete: ${updateResult.updated} updated, ${updateResult.failed} failed, ${updateResult.skipped} skipped\n`);
+                    } catch (updateError) {
+                        console.error(`❌ Update error: ${updateError.message}`);
+                    }
+                }
 
                 // ✅ SAVE PROGRESS after query complete
                 saveProgress();
