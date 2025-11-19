@@ -1026,6 +1026,12 @@
                     <div class="stat-card">
                         <div class="stat-value">${data.total_comments?.toLocaleString() || 0}</div>
                         <div class="stat-label">Total Comments</div>
+                        <small style="color: #999; font-size: 0.8em; display: block; margin-top: 5px;">From post metadata</small>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.extracted_comments?.toLocaleString() || 0}</div>
+                        <div class="stat-label">Extracted Comments</div>
+                        <small style="color: #999; font-size: 0.8em; display: block; margin-top: 5px;">Stored in database</small>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${data.total_reactions?.toLocaleString() || 0}</div>
