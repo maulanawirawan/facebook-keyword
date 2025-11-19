@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facebook Analytics Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.7/build/d3.layout.cloud.js"></script>
@@ -1620,7 +1621,8 @@
                     <tbody>
                         ${data.map(post => {
                             const totalEngagement = (post.reactions || 0) + (post.comments || 0) + (post.shares || 0);
-                            const timestamp = post.timestamp ? new Date(post.timestamp) : null;
+                            // Use timestamp_iso (ISO format) instead of timestamp (string format)
+                            const timestamp = post.timestamp_iso ? new Date(post.timestamp_iso) : null;
                             const wibDate = timestamp ? formatToWIB(timestamp) : 'N/A';
 
                             return `
