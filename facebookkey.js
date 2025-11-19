@@ -5885,10 +5885,12 @@ async function scrapeFacebookSearch(page, query, maxPosts, filterYear = null) {
                     if (CONFIG.EXTRACT_COMMENTS) {
                         try {
                             const commentFilename = path.join(CONFIG.csv_base_folder, CONFIG.COMMENT_CSV_FILENAME);
+                            // ✅ FIX: Use shareUrl (more reliable) instead of postUrl (can be fbid URL)
+                            const commentPostUrl = (shareUrl && shareUrl !== "N/A") ? shareUrl : postUrl;
                             const extractedComments = await extractAllCommentsHybrid(
                                 page,
                                 postEl,
-                                postUrl,
+                                commentPostUrl,
                                 authorName,
                                 postId
                             );
