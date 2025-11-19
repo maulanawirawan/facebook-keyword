@@ -612,6 +612,60 @@
             max-width: 100%;
             height: auto;
         }
+
+        .hashtag-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .hashtag-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .dark-mode .hashtag-item {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+        }
+
+        .hashtag-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .hashtag-text {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.1em;
+        }
+
+        .dark-mode .hashtag-text {
+            color: #8b9fea;
+        }
+
+        .hashtag-count {
+            background: var(--primary);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .hashtag-bar {
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+            margin-top: 5px;
+            transition: width 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -631,9 +685,6 @@
             <div class="header-right">
                 <button class="btn btn-primary" onclick="refreshData()">
                     <i class="fas fa-sync-alt"></i> Refresh
-                </button>
-                <button class="btn btn-primary" onclick="exportToCSV()">
-                    <i class="fas fa-download"></i> Export CSV
                 </button>
                 <button class="btn btn-secondary" onclick="toggleDarkMode()">
                     <i class="fas fa-moon"></i> Dark Mode
@@ -715,8 +766,15 @@
                 </div>
             </div>
 
+            <div class="chart-card">
+                <h2><i class="fas fa-hashtag"></i> Top Hashtags</h2>
+                <div id="topHashtags">
+                    <div class="loading">Loading hashtags...</div>
+                </div>
+            </div>
+
             <div class="chart-card full-width">
-                <h2><i class="fas fa-hashtag"></i> Popular Hashtags Word Cloud</h2>
+                <h2><i class="fas fa-cloud"></i> Hashtags Word Cloud</h2>
                 <div id="wordCloud"></div>
             </div>
         </div>
@@ -732,7 +790,21 @@
 
             <div id="tab-posts" class="tab-content">
                 <div class="table-controls">
-                    <span id="postsCount">Showing 0 posts</span>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <span id="postsCount">Showing 0 posts</span>
+                        <div class="filter-group" style="margin: 0;">
+                            <label style="margin-right: 5px;">Show:</label>
+                            <select id="postsPerPage" onchange="changePostsLimit()" style="padding: 8px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                                <option value="50">50 posts</option>
+                                <option value="100">100 posts</option>
+                                <option value="200">200 posts</option>
+                                <option value="500">500 posts</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="exportToCSV()">
+                        <i class="fas fa-download"></i> Export to CSV
+                    </button>
                 </div>
                 <div id="posts">
                     <div class="loading">Loading posts...</div>
@@ -970,10 +1042,6 @@
                     <div class="stat-card">
                         <div class="stat-value">${data.unique_authors?.toLocaleString() || 0}</div>
                         <div class="stat-label">Unique Authors</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${data.posts_with_images?.toLocaleString() || 0}</div>
-                        <div class="stat-label">Posts with Images</div>
                     </div>
                 `;
 
@@ -1304,8 +1372,8 @@
             }
         }
 
-        // Word cloud from hashtags (posts + comments)
-        async function createWordCloud() {
+        // Extract hashtags and create both list and word cloud
+        async function createHashtagVisualizations() {
             try {
                 // Fetch both posts and comments
                 const [postsResponse, commentsResponse] = await Promise.all([
@@ -1347,77 +1415,165 @@
                 });
 
                 // Convert to array and sort
-                const words = Object.keys(hashtagCounts).map(word => ({
+                const sortedHashtags = Object.keys(hashtagCounts).map(word => ({
                     text: word,
-                    size: hashtagCounts[word]
-                })).sort((a, b) => b.size - a.size).slice(0, 50);
+                    count: hashtagCounts[word]
+                })).sort((a, b) => b.count - a.count);
 
-                if (words.length === 0) {
+                if (sortedHashtags.length === 0) {
+                    document.getElementById('topHashtags').innerHTML = '<p style="text-align: center; color: #999;">No hashtags found</p>';
                     document.getElementById('wordCloud').innerHTML = '<p style="text-align: center; color: #999;">No hashtags found</p>';
                     return;
                 }
 
-                // Clear previous word cloud
-                document.getElementById('wordCloud').innerHTML = '';
+                // Create Top Hashtags List (top 15)
+                createTopHashtagsList(sortedHashtags.slice(0, 15));
 
-                // Create word cloud
-                const width = document.getElementById('wordCloud').clientWidth || 800;
-                const height = 400;
+                // Create Word Cloud (top 50)
+                createWordCloud(sortedHashtags.slice(0, 50));
 
-                const maxSize = Math.max(...words.map(w => w.size));
-                const minSize = Math.min(...words.map(w => w.size));
-
-                const layout = d3.layout.cloud()
-                    .size([width, height])
-                    .words(words.map(d => ({
-                        text: d.text,
-                        size: 20 + (d.size / maxSize) * 60
-                    })))
-                    .padding(5)
-                    .rotate(() => (~~(Math.random() * 2) * 90))
-                    .font('Impact')
-                    .fontSize(d => d.size)
-                    .on('end', draw);
-
-                layout.start();
-
-                function draw(words) {
-                    const svg = d3.select('#wordCloud').append('svg')
-                        .attr('width', width)
-                        .attr('height', height)
-                        .append('g')
-                        .attr('transform', `translate(${width / 2},${height / 2})`);
-
-                    const colorScale = d3.scaleOrdinal()
-                        .range(['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a']);
-
-                    svg.selectAll('text')
-                        .data(words)
-                        .enter().append('text')
-                        .style('font-size', d => `${d.size}px`)
-                        .style('font-family', 'Impact')
-                        .style('fill', (d, i) => colorScale(i))
-                        .style('cursor', 'pointer')
-                        .attr('text-anchor', 'middle')
-                        .attr('transform', d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
-                        .text(d => d.text)
-                        .on('mouseover', function() {
-                            d3.select(this).style('opacity', 0.7);
-                        })
-                        .on('mouseout', function() {
-                            d3.select(this).style('opacity', 1);
-                        });
-                }
             } catch (error) {
-                console.error('Failed to create word cloud:', error);
+                console.error('Failed to create hashtag visualizations:', error);
+                document.getElementById('topHashtags').innerHTML = '<p style="text-align: center; color: #f00;">Failed to load hashtags</p>';
                 document.getElementById('wordCloud').innerHTML = '<p style="text-align: center; color: #f00;">Failed to load word cloud</p>';
             }
         }
 
+        // Create top hashtags list
+        function createTopHashtagsList(hashtags) {
+            const maxCount = hashtags[0].count;
+            const listHTML = `
+                <ul class="hashtag-list">
+                    ${hashtags.map((tag, index) => {
+                        const barWidth = (tag.count / maxCount) * 100;
+                        return `
+                            <li class="hashtag-item">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span class="hashtag-text">${index + 1}. ${tag.text}</span>
+                                        <span class="hashtag-count">${tag.count.toLocaleString()}</span>
+                                    </div>
+                                    <div class="hashtag-bar" style="width: ${barWidth}%;"></div>
+                                </div>
+                            </li>
+                        `;
+                    }).join('')}
+                </ul>
+            `;
+            document.getElementById('topHashtags').innerHTML = listHTML;
+        }
+
+        // Create improved word cloud
+        function createWordCloud(hashtags) {
+            // Clear previous word cloud
+            document.getElementById('wordCloud').innerHTML = '';
+
+            const width = document.getElementById('wordCloud').clientWidth || 800;
+            const height = 400;
+
+            const maxSize = Math.max(...hashtags.map(h => h.count));
+
+            const layout = d3.layout.cloud()
+                .size([width, height])
+                .words(hashtags.map(d => ({
+                    text: d.text,
+                    size: 20 + (d.count / maxSize) * 70,
+                    count: d.count
+                })))
+                .padding(8)
+                .rotate(() => (~~(Math.random() * 6) - 3) * 15) // Random rotation between -45 and +45
+                .font('Arial, sans-serif')
+                .fontWeight('bold')
+                .fontSize(d => d.size)
+                .on('end', draw);
+
+            layout.start();
+
+            function draw(words) {
+                const svg = d3.select('#wordCloud').append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .append('g')
+                    .attr('transform', `translate(${width / 2},${height / 2})`);
+
+                // Create vibrant gradient colors
+                const colors = [
+                    '#667eea', '#764ba2', '#f093fb', '#4facfe',
+                    '#43e97b', '#fa709a', '#feca57', '#ff6348',
+                    '#00d2ff', '#3a7bd5', '#ff0844', '#ffb199'
+                ];
+
+                const colorScale = d3.scaleOrdinal().range(colors);
+
+                const text = svg.selectAll('text')
+                    .data(words)
+                    .enter().append('text')
+                    .style('font-size', d => `${d.size}px`)
+                    .style('font-family', 'Arial, sans-serif')
+                    .style('font-weight', 'bold')
+                    .style('fill', (d, i) => colorScale(i))
+                    .style('cursor', 'pointer')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
+                    .text(d => d.text)
+                    .style('opacity', 0)
+                    .transition()
+                    .duration(800)
+                    .style('opacity', 1);
+
+                // Add hover effects
+                svg.selectAll('text')
+                    .on('mouseover', function(event, d) {
+                        d3.select(this)
+                            .transition()
+                            .duration(200)
+                            .style('opacity', 0.7)
+                            .style('font-size', `${d.size * 1.2}px`);
+
+                        // Show count as tooltip
+                        const tooltip = d3.select('body').append('div')
+                            .attr('class', 'hashtag-tooltip')
+                            .style('position', 'absolute')
+                            .style('background', 'rgba(0, 0, 0, 0.8)')
+                            .style('color', 'white')
+                            .style('padding', '8px 12px')
+                            .style('border-radius', '5px')
+                            .style('font-size', '14px')
+                            .style('pointer-events', 'none')
+                            .style('z-index', '9999')
+                            .html(`${d.text}: <strong>${d.count}</strong> times`)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 28) + 'px');
+                    })
+                    .on('mouseout', function(event, d) {
+                        d3.select(this)
+                            .transition()
+                            .duration(200)
+                            .style('opacity', 1)
+                            .style('font-size', `${d.size}px`);
+
+                        d3.selectAll('.hashtag-tooltip').remove();
+                    })
+                    .on('click', function(event, d) {
+                        // Search for this hashtag
+                        document.getElementById('searchInput').value = d.text;
+                        handleSearch();
+                        showToast(`Searching for ${d.text}`);
+                    });
+            }
+        }
+
+        // Change posts limit
+        async function changePostsLimit() {
+            const limit = document.getElementById('postsPerPage').value;
+            showToast(`Loading ${limit} posts...`);
+            await loadPosts(parseInt(limit));
+        }
+
         // Load posts with clickable links
-        async function loadPosts() {
+        async function loadPosts(limit = 50) {
             try {
-                const response = await apiFetch('/api/posts/top/engagement?limit=50');
+                const response = await apiFetch(`/api/posts/top/engagement?limit=${limit}`);
                 const data = await response.json();
                 allPosts = data;
 
@@ -1443,6 +1599,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th>Date (WIB)</th>
                             <th>Author</th>
                             <th>Text</th>
                             <th>Location</th>
@@ -1450,12 +1607,21 @@
                             <th>Reactions</th>
                             <th>Comments</th>
                             <th>Shares</th>
+                            <th>Total Engagement</th>
                             <th>Link</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.map(post => `
+                        ${data.map(post => {
+                            const totalEngagement = (post.reactions || 0) + (post.comments || 0) + (post.shares || 0);
+                            const timestamp = post.timestamp ? new Date(post.timestamp) : null;
+                            const wibDate = timestamp ? formatToWIB(timestamp) : 'N/A';
+
+                            return `
                             <tr>
+                                <td style="white-space: nowrap;">
+                                    ${wibDate !== 'N/A' ? `<i class="fas fa-clock" style="color: var(--primary);"></i> ${wibDate}` : '<span style="color: #999;">-</span>'}
+                                </td>
                                 <td>
                                     ${post.author ? `<a href="https://facebook.com/${post.author}" target="_blank" class="link external-link">${post.author} <i class="fas fa-external-link-alt"></i></a>` : 'Unknown'}
                                 </td>
@@ -1469,17 +1635,33 @@
                                 <td><span class="badge badge-reactions">${post.reactions?.toLocaleString() || 0}</span></td>
                                 <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
                                 <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
+                                <td><strong style="color: var(--primary); font-size: 1.1em;">${totalEngagement.toLocaleString()}</strong></td>
                                 <td>
                                     ${(post.share_url || post.post_url) ? `<a href="${post.share_url || post.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View Post</a>` : 'N/A'}
                                 </td>
                             </tr>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
 
             document.getElementById('posts').innerHTML = postsHTML;
             document.getElementById('postsCount').textContent = `Showing ${data.length} posts`;
+        }
+
+        // Format date to WIB (UTC+7)
+        function formatToWIB(date) {
+            const options = {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            };
+            return new Intl.DateTimeFormat('id-ID', options).format(date);
         }
 
         // Load comments
@@ -1677,35 +1859,46 @@
 
         // Export to CSV
         function exportToCSV() {
-            const data = allPosts;
+            const data = filteredData.length > 0 ? filteredData : allPosts;
             if (data.length === 0) {
                 showToast('No data to export');
                 return;
             }
 
-            const headers = ['Author', 'Text', 'Reactions', 'Comments', 'Shares', 'URL'];
-            const rows = data.map(post => [
-                post.author || '',
-                (post.text_preview || '').replace(/"/g, '""'),
-                post.reactions || 0,
-                post.comments || 0,
-                post.shares || 0,
-                post.share_url || post.post_url || ''
-            ]);
+            const headers = ['Date (WIB)', 'Author', 'Text', 'Location', 'Music Title', 'Music Artist', 'Reactions', 'Comments', 'Shares', 'Total Engagement', 'URL'];
+            const rows = data.map(post => {
+                const totalEngagement = (post.reactions || 0) + (post.comments || 0) + (post.shares || 0);
+                const timestamp = post.timestamp ? new Date(post.timestamp) : null;
+                const wibDate = timestamp ? formatToWIB(timestamp) : 'N/A';
+
+                return [
+                    wibDate,
+                    post.author || '',
+                    (post.text_preview || '').replace(/"/g, '""'),
+                    post.location || '',
+                    post.music_title || '',
+                    post.music_artist || '',
+                    post.reactions || 0,
+                    post.comments || 0,
+                    post.shares || 0,
+                    totalEngagement,
+                    post.share_url || post.post_url || ''
+                ];
+            });
 
             let csv = headers.join(',') + '\n';
             rows.forEach(row => {
                 csv += row.map(cell => `"${cell}"`).join(',') + '\n';
             });
 
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `facebook-analytics-${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
 
-            showToast('CSV exported successfully!');
+            showToast(`CSV exported successfully! (${data.length} posts)`);
         }
 
         // Refresh all data
@@ -1719,7 +1912,7 @@
             await createEngagementDonut();
             await createDailyTrendsLine();
             await createPostsStackedBar();
-            await createWordCloud();
+            await createHashtagVisualizations();
             await loadPosts();
             await loadComments();
             await loadAuthors();
@@ -1738,7 +1931,7 @@
             await createEngagementDonut();
             await createDailyTrendsLine();
             await createPostsStackedBar();
-            await createWordCloud();
+            await createHashtagVisualizations();
 
             // Load tables
             await loadPosts();
