@@ -423,32 +423,14 @@
         }
 
         /* Staggered delay for smooth appearance */
-        .stat-card:nth-child(1) { animation-delay: 0.1s; }
-        .stat-card:nth-child(2) { animation-delay: 0.15s; }
-        .stat-card:nth-child(3) { animation-delay: 0.2s; }
-        .stat-card:nth-child(4) { animation-delay: 0.25s; }
-        .stat-card:nth-child(5) { animation-delay: 0.3s; }
-        .stat-card:nth-child(6) { animation-delay: 0.35s; }
-        .stat-card:nth-child(7) { animation-delay: 0.4s; }
-        .stat-card:nth-child(8) { animation-delay: 0.45s; }
-
-        /* Subtle shimmer effect */
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(
-                90deg,
-                transparent,
-                rgba(255, 255, 255, 0.2),
-                transparent
-            );
-            animation: shimmer 4s infinite;
-            pointer-events: none;
-        }
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+        .stat-card:nth-child(5) { animation-delay: 0.25s; }
+        .stat-card:nth-child(6) { animation-delay: 0.3s; }
+        .stat-card:nth-child(7) { animation-delay: 0.35s; }
+        .stat-card:nth-child(8) { animation-delay: 0.4s; }
 
         .dark-mode .stat-card {
             background: rgba(255, 255, 255, 0.05);
@@ -472,19 +454,7 @@
             font-weight: bold;
             color: #ffffff;
             margin-bottom: 10px;
-            position: relative;
-            display: inline-block;
-            text-shadow: 0 2px 15px rgba(102, 126, 234, 0.5);
-
-            /* ✨ Subtle pulsing glow effect */
-            animation: pulseGlow 3s ease-in-out infinite;
-        }
-
-        /* Typing cursor effect */
-        .stat-value.typing::after {
-            content: '|';
-            animation: blink 1s step-end infinite;
-            margin-left: 2px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
         .stat-label {
@@ -1457,45 +1427,6 @@
             });
         }
 
-        // ✨ Typing effect for numbers (character by character)
-        function typeNumber(element, finalText, duration = 1500) {
-            const text = String(finalText);
-            let currentIndex = 0;
-
-            // Add typing class to show cursor
-            element.classList.add('typing');
-            element.textContent = '';
-
-            const charDelay = duration / text.length;
-
-            const typeChar = () => {
-                if (currentIndex < text.length) {
-                    element.textContent += text[currentIndex];
-                    currentIndex++;
-                    setTimeout(typeChar, charDelay);
-                } else {
-                    // Remove typing class when done
-                    setTimeout(() => {
-                        element.classList.remove('typing');
-                    }, 500);
-                }
-            };
-
-            typeChar();
-        }
-
-        // ✨ Apply typing effect to all stat values
-        function animateStatValues() {
-            const statValues = document.querySelectorAll('.stat-value');
-            statValues.forEach((element, index) => {
-                const finalValue = element.textContent;
-                // Stagger the typing animation for each stat
-                setTimeout(() => {
-                    typeNumber(element, finalValue, 1200);
-                }, index * 200); // 200ms delay between each stat
-            });
-        }
-
         // Load statistics
         async function loadStats() {
             try {
@@ -1536,11 +1467,6 @@
                 `;
 
                 document.getElementById('stats').innerHTML = statsHTML;
-
-                // ✨ Apply typing effect to stat values
-                setTimeout(() => {
-                    animateStatValues();
-                }, 100); // Small delay to ensure DOM is ready
             } catch (error) {
                 document.getElementById('stats').innerHTML = '<div class="error">Failed to load statistics</div>';
             }
@@ -2657,37 +2583,24 @@
             showToast('Dashboard loaded!');
 
             // ✅ COUNTDOWN TIMER: Update countdown every second
-            let countdown = 10;
+            let countdown = 60;
             setInterval(() => {
                 countdown--;
-                if (countdown <= 0) countdown = 10;
+                if (countdown <= 0) countdown = 60;
                 const countdownEl = document.getElementById('refreshCountdown');
                 if (countdownEl) countdownEl.textContent = countdown;
             }, 1000);
 
-            // ✅ AUTO-REFRESH: Update data every 10 seconds for real-time updates
+            // ✅ AUTO-REFRESH: Update data every 1 minute
             setInterval(async () => {
                 console.log('🔄 Auto-refreshing data...');
 
-                // Refresh stats (lightweight)
+                // Refresh stats only (lightweight)
                 await checkAPIHealth();
                 await loadStats();
 
-                // Refresh tables (posts, comments, authors)
-                await loadPosts();
-                await loadComments();
-                await loadAuthors();
-
-                // Refresh charts (only if visible)
-                const currentTab = document.querySelector('.tab-content[style*="display: block"]');
-                if (!currentTab || currentTab.id === 'tab-posts') {
-                    // If on main view, refresh main charts
-                    await createAuthorsBarChart();
-                    await createDailyTrendsLine();
-                }
-
-                console.log('✅ Data refreshed!');
-            }, 10000); // Refresh every 10 seconds for real-time updates
+                console.log('✅ Stats refreshed!');
+            }, 60000); // Refresh every 1 minute (60 seconds)
         }
 
         // Start when page loads
