@@ -711,6 +711,200 @@ app.get('/api/posts/views', async (req, res) => {
 });
 
 // ========================================
+// INSTAGRAM ENDPOINTS
+// ========================================
+
+// Get Instagram overall statistics
+app.get('/api/instagram/stats', async (req, res) => {
+    try {
+        const statsQuery = `
+            SELECT
+                COUNT(*) as total_posts,
+                COUNT(DISTINCT author) as unique_authors,
+                COUNT(DISTINCT query_used) as unique_hashtags,
+                SUM(likes) as total_likes,
+                SUM(comments) as total_comments_count,
+                SUM(views) as total_views,
+                ROUND(AVG(likes), 2) as avg_likes,
+                ROUND(AVG(comments), 2) as avg_comments
+            FROM instagram_posts
+        `;
+
+        const result = await pool.query(statsQuery);
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching Instagram stats:', error);
+        res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
+});
+
+// Get Instagram posts (paginated)
+app.get('/api/instagram/posts', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = (page - 1) * limit;
+
+        const postsQuery = `
+            SELECT * FROM instagram_posts
+            ORDER BY timestamp DESC
+            LIMIT $1 OFFSET $2
+        `;
+
+        const countQuery = 'SELECT COUNT(*) FROM instagram_posts';
+
+        const [postsResult, countResult] = await Promise.all([
+            pool.query(postsQuery, [limit, offset]),
+            pool.query(countQuery)
+        ]);
+
+        res.json({
+            posts: postsResult.rows,
+            total: parseInt(countResult.rows[0].count),
+            page,
+            limit,
+            totalPages: Math.ceil(countResult.rows[0].count / limit)
+        });
+    } catch (error) {
+        console.error('Error fetching Instagram posts:', error);
+        res.status(500).json({ error: 'Failed to fetch posts' });
+    }
+});
+
+// Get Instagram top posts by engagement
+app.get('/api/instagram/posts/top/engagement', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+
+        const query = `
+            SELECT * FROM instagram_posts
+            ORDER BY engagement_score DESC, likes DESC
+            LIMIT $1
+        `;
+
+        const result = await pool.query(query, [limit]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching top Instagram posts:', error);
+        res.status(500).json({ error: 'Failed to fetch top posts' });
+    }
+});
+
+// Get Instagram comments (paginated)
+app.get('/api/instagram/comments', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = (page - 1) * limit;
+
+        const commentsQuery = `
+            SELECT * FROM instagram_comments
+            ORDER BY comment_timestamp_unix DESC
+            LIMIT $1 OFFSET $2
+        `;
+
+        const countQuery = 'SELECT COUNT(*) FROM instagram_comments';
+
+        const [commentsResult, countResult] = await Promise.all([
+            pool.query(commentsQuery, [limit, offset]),
+            pool.query(countQuery)
+        ]);
+
+        res.json({
+            comments: commentsResult.rows,
+            total: parseInt(countResult.rows[0].count),
+            page,
+            limit,
+            totalPages: Math.ceil(countResult.rows[0].count / limit)
+        });
+    } catch (error) {
+        console.error('Error fetching Instagram comments:', error);
+        res.status(500).json({ error: 'Failed to fetch comments' });
+    }
+});
+
+// Get top Instagram hashtags
+app.get('/api/instagram/hashtags/top', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+
+        const query = `
+            SELECT
+                query_used as hashtag,
+                COUNT(*) as post_count,
+                SUM(likes) as total_likes,
+                SUM(comments) as total_comments,
+                ROUND(AVG(engagement_score), 2) as avg_engagement
+            FROM instagram_posts
+            WHERE query_used IS NOT NULL
+            GROUP BY query_used
+            ORDER BY post_count DESC, total_likes DESC
+            LIMIT $1
+        `;
+
+        const result = await pool.query(query, [limit]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching top Instagram hashtags:', error);
+        res.status(500).json({ error: 'Failed to fetch hashtags' });
+    }
+});
+
+// Get top Instagram authors
+app.get('/api/instagram/authors/top', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+
+        const query = `
+            SELECT
+                author,
+                author_profile_link,
+                MAX(author_followers) as followers,
+                COUNT(*) as post_count,
+                SUM(likes) as total_likes,
+                SUM(comments) as total_comments,
+                ROUND(AVG(engagement_score), 2) as avg_engagement
+            FROM instagram_posts
+            WHERE author IS NOT NULL
+            GROUP BY author, author_profile_link
+            ORDER BY post_count DESC, total_likes DESC
+            LIMIT $1
+        `;
+
+        const result = await pool.query(query, [limit]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching top Instagram authors:', error);
+        res.status(500).json({ error: 'Failed to fetch authors' });
+    }
+});
+
+// Get Instagram daily trends
+app.get('/api/instagram/trends/daily', async (req, res) => {
+    try {
+        const query = `
+            SELECT
+                DATE(timestamp_iso) as date,
+                COUNT(*) as post_count,
+                SUM(likes) as total_likes,
+                SUM(comments) as total_comments,
+                ROUND(AVG(engagement_score), 2) as avg_engagement
+            FROM instagram_posts
+            WHERE timestamp_iso IS NOT NULL
+            GROUP BY DATE(timestamp_iso)
+            ORDER BY date DESC
+            LIMIT 30
+        `;
+
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching Instagram daily trends:', error);
+        res.status(500).json({ error: 'Failed to fetch trends' });
+    }
+});
+
+// ========================================
 // ERROR HANDLING
 // ========================================
 
@@ -729,7 +923,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🚀 Facebook Analytics API Server');
+    console.log('🚀 Social Media Analytics API Server');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`📡 Server running on: http://localhost:${PORT}`);
     console.log(`🗄️  Database: ${process.env.DB_NAME || 'facebook_data'}`);
@@ -737,6 +931,8 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('');
     console.log('📊 Available endpoints:');
+    console.log('');
+    console.log('   📘 FACEBOOK:');
     console.log('   GET    /api/stats              - Overall statistics');
     console.log('   GET    /api/stats/daily        - Daily statistics');
     console.log('   GET    /api/posts              - All posts (paginated)');
@@ -752,6 +948,15 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('   POST   /api/import             - Trigger data import (CSV/JSON)');
     console.log('   DELETE /api/cleanup/sample     - Delete sample/test data');
     console.log('   DELETE /api/cleanup/all        - Delete ALL data (fresh start)');
+    console.log('');
+    console.log('   📷 INSTAGRAM:');
+    console.log('   GET    /api/instagram/stats    - Overall Instagram statistics');
+    console.log('   GET    /api/instagram/posts    - All Instagram posts (paginated)');
+    console.log('   GET    /api/instagram/posts/top/engagement - Top Instagram posts');
+    console.log('   GET    /api/instagram/comments - Instagram comments (paginated)');
+    console.log('   GET    /api/instagram/hashtags/top - Top Instagram hashtags');
+    console.log('   GET    /api/instagram/authors/top - Top Instagram authors');
+    console.log('   GET    /api/instagram/trends/daily - Instagram daily trends');
     console.log('');
 });
 
