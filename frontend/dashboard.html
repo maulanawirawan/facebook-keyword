@@ -1068,13 +1068,13 @@
     <div class="container">
         <header>
             <div class="header-left">
-                <h1>📊 Facebook Analytics Dashboard</h1>
+                <h1>📊 Social Media Analytics Dashboard</h1>
                 <p class="subtitle">Real-time social media analytics and reporting</p>
                 <p class="subtitle" style="margin-top: 8px;">
                     <span id="refreshStatus" style="display: inline-flex; align-items: center; gap: 5px;">
                         <i class="fas fa-circle" style="color: #22c55e; font-size: 8px; animation: pulse 2s infinite;"></i>
                         <span style="font-weight: 500;">Live Updates Active</span>
-                        <span style="opacity: 0.7;">• Next refresh in <span id="refreshCountdown">10</span>s</span>
+                        <span style="opacity: 0.7;">• Next refresh in <span id="refreshCountdown">60</span>s</span>
                     </span>
                 </p>
             </div>
@@ -1088,6 +1088,20 @@
             </div>
         </header>
 
+        <!-- Platform Switcher -->
+        <div class="content-section" style="margin-bottom: 20px; padding: 20px;">
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-primary platform-btn active" id="btn-facebook" onclick="switchPlatform('facebook')" style="min-width: 180px; font-size: 1.1em;">
+                    <i class="fab fa-facebook"></i> Facebook
+                </button>
+                <button class="btn btn-secondary platform-btn" id="btn-instagram" onclick="switchPlatform('instagram')" style="min-width: 180px; font-size: 1.1em;">
+                    <i class="fab fa-instagram"></i> Instagram
+                </button>
+            </div>
+        </div>
+
+        <!-- Facebook Content -->
+        <div id="facebook-content">
         <!-- Filters Section -->
         <div class="filters-section">
             <div class="filter-group">
@@ -1245,6 +1259,102 @@
             </div>
         </div>
     </div>
+    </div>
+    <!-- End Facebook Content -->
+
+    <!-- Instagram Content -->
+    <div id="instagram-content" style="display: none;">
+        <!-- Instagram Statistics Cards -->
+        <div class="stats-grid" id="instagram-stats">
+            <div class="loading">Loading Instagram statistics...</div>
+        </div>
+
+        <!-- Instagram Charts Section -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h2><i class="fas fa-hashtag"></i> Top Hashtags</h2>
+                <div class="chart-container">
+                    <canvas id="instagramHashtagsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h2><i class="fas fa-users"></i> Top Authors by Likes</h2>
+                <div class="chart-container">
+                    <canvas id="instagramAuthorsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card full-width">
+                <h2><i class="fas fa-chart-line"></i> Daily Engagement Trends</h2>
+                <div class="chart-container">
+                    <canvas id="instagramTrendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instagram Data Tables -->
+        <div class="content-section">
+            <h2><i class="fas fa-table"></i> Instagram Data Tables</h2>
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showInstagramTab('posts')"><i class="fas fa-newspaper"></i> Top Posts</button>
+                <button class="nav-tab" onclick="showInstagramTab('comments')"><i class="fas fa-comments"></i> Recent Comments</button>
+                <button class="nav-tab" onclick="showInstagramTab('authors')"><i class="fas fa-user-friends"></i> Top Authors</button>
+            </div>
+
+            <div id="instagram-tab-posts" class="tab-content">
+                <div class="table-controls">
+                    <span id="instagramPostsCount">Showing 0 posts</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label>Show:</label>
+                        <select id="instagramPostsPerPage" onchange="handleInstagramPostsPerPageChange()">
+                            <option value="20">20 posts</option>
+                            <option value="50" selected>50 posts</option>
+                            <option value="100">100 posts</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="instagram-posts">
+                    <div class="loading">Loading Instagram posts...</div>
+                </div>
+            </div>
+
+            <div id="instagram-tab-comments" class="tab-content" style="display:none;">
+                <div class="table-controls">
+                    <span id="instagramCommentsCount">Showing 0 comments</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label>Show:</label>
+                        <select id="instagramCommentsPerPage" onchange="handleInstagramCommentsPerPageChange()">
+                            <option value="20">20 comments</option>
+                            <option value="50" selected>50 comments</option>
+                            <option value="100">100 comments</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="instagram-comments">
+                    <div class="loading">Loading Instagram comments...</div>
+                </div>
+            </div>
+
+            <div id="instagram-tab-authors" class="tab-content" style="display:none;">
+                <div class="table-controls">
+                    <span id="instagramAuthorsCount">Showing 0 authors</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label>Show:</label>
+                        <select id="instagramAuthorsPerPage" onchange="handleInstagramAuthorsPerPageChange()">
+                            <option value="20" selected>20 authors</option>
+                            <option value="50">50 authors</option>
+                            <option value="100">100 authors</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="instagram-authors">
+                    <div class="loading">Loading Instagram authors...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Instagram Content -->
 
     <div class="api-status">
         <span class="status-dot status-offline" id="statusDot"></span>
