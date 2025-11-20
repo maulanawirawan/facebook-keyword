@@ -38,7 +38,7 @@
             overflow-x: hidden;
         }
 
-        /* 🌊 Animated Wave Background with Gradient */
+        /* 🌊 Animated Wave Background Only - Elegant Teal-Blue Gradient */
         body::before {
             content: '';
             position: fixed;
@@ -48,17 +48,16 @@
             height: 100%;
             z-index: -2;
             background: linear-gradient(135deg,
-                #667eea 0%,
-                #764ba2 25%,
-                #f093fb 50%,
-                #4facfe 75%,
-                #00f2fe 100%
+                #1e3c72 0%,
+                #2a5298 35%,
+                #7e22ce 70%,
+                #e8b4f0 100%
             );
             background-size: 400% 400%;
             animation: gradientWave 15s ease infinite;
         }
 
-        /* Floating bubble overlay */
+        /* Subtle floating overlay (no wave on cards, only background) */
         body::after {
             content: '';
             position: fixed;
@@ -68,9 +67,9 @@
             height: 100%;
             z-index: -1;
             background-image:
-                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 20%, rgba(120, 119, 198, 0.3) 0%, transparent 50%);
+                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(126, 34, 206, 0.1) 0%, transparent 50%);
             animation: floatBubbles 20s ease-in-out infinite;
         }
 
@@ -88,18 +87,17 @@
 
         body.dark-mode::before {
             background: linear-gradient(135deg,
-                #1a1a2e 0%,
-                #16213e 25%,
-                #0f3460 50%,
-                #533483 75%,
+                #0f0c29 0%,
+                #302b63 35%,
+                #24243e 70%,
                 #1a1a2e 100%
             );
         }
 
         body.dark-mode::after {
             background-image:
-                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.15) 0%, transparent 50%);
+                radial-gradient(circle at 20% 50%, rgba(48, 43, 99, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(36, 36, 62, 0.1) 0%, transparent 50%);
         }
 
         .container {
@@ -107,15 +105,15 @@
             margin: 0 auto;
         }
 
-        /* 🔮 Glass Morphism Cards */
+        /* 🔮 Glass Morphism Cards - No wave, just glass effect */
         header {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             padding: 30px;
             border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             margin-bottom: 30px;
             display: flex;
             justify-content: space-between;
@@ -125,7 +123,7 @@
         }
 
         .dark-mode header {
-            background: rgba(30, 30, 30, 0.4);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-dark);
@@ -192,15 +190,15 @@
             color: #eee;
         }
 
-        /* 🔮 Glass Morphism Filters */
+        /* 🔮 Glass Morphism Filters - Static glass only */
         .filters-section {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(15px) saturate(180%);
             -webkit-backdrop-filter: blur(15px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             padding: 25px;
             border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
             margin-bottom: 30px;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -212,9 +210,9 @@
         }
 
         .dark-mode .filters-section {
-            background: rgba(30, 30, 30, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(15px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .search-wrapper {
@@ -405,15 +403,15 @@
             margin-bottom: 30px;
         }
 
-        /* ✨ Glass Morphism Stat Cards */
+        /* ✨ Glass Morphism Stat Cards - Static glass, no wave */
         .stat-card {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(15px) saturate(180%);
             -webkit-backdrop-filter: blur(15px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             padding: 25px;
             border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
             text-align: center;
             transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
             position: relative;
@@ -453,20 +451,20 @@
         }
 
         .dark-mode .stat-card {
-            background: rgba(30, 30, 30, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(15px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .stat-card:hover {
             transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
-            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 12px 40px rgba(126, 34, 206, 0.35);
+            border-color: rgba(255, 255, 255, 0.5);
         }
 
         .dark-mode .stat-card:hover {
-            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
-            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 12px 40px rgba(126, 34, 206, 0.25);
+            border-color: rgba(126, 34, 206, 0.4);
         }
 
         .stat-value {
@@ -508,15 +506,15 @@
             margin-bottom: 30px;
         }
 
-        /* 🔮 Glass Morphism Chart Cards */
+        /* 🔮 Glass Morphism Chart Cards - Static glass only */
         .chart-card {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(15px) saturate(180%);
             -webkit-backdrop-filter: blur(15px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             padding: 30px;
             border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 
             /* ✅ Smooth fade-in animation */
             animation: fadeInUp 0.6s ease-out both;
@@ -532,18 +530,18 @@
         /* Hover effect for charts */
         .chart-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
-            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 12px 40px rgba(126, 34, 206, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
         }
 
         .dark-mode .chart-card {
-            background: rgba(30, 30, 30, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(15px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .dark-mode .chart-card:hover {
-            border-color: rgba(102, 126, 234, 0.5);
+            border-color: rgba(126, 34, 206, 0.4);
         }
 
         .chart-card.full-width {
@@ -573,22 +571,22 @@
             height: 300px;
         }
 
-        /* 🔮 Glass Morphism Content Sections */
+        /* 🔮 Glass Morphism Content Sections - Static glass only */
         .content-section {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(15px) saturate(180%);
             -webkit-backdrop-filter: blur(15px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             padding: 30px;
             border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
             margin-bottom: 30px;
         }
 
         .dark-mode .content-section {
-            background: rgba(30, 30, 30, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(15px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         h2 {
