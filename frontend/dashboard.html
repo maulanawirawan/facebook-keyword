@@ -14,11 +14,13 @@
             --primary: #667eea;
             --secondary: #764ba2;
             --bg-light: #f5f7fa;
-            --bg-dark: #1a1a2e;
+            --bg-dark: #0d1117;
             --text-light: #333;
-            --text-dark: #eee;
+            --text-dark: #f0f6fc;
             --card-light: #ffffff;
-            --card-dark: #16213e;
+            --card-dark: #161b22;
+            --border-dark: #30363d;
+            --hover-dark: #21262d;
         }
 
         * {
@@ -365,6 +367,47 @@
             margin-top: 20px;
         }
 
+        /* ✅ Virtual Scroll Container */
+        #virtualScrollContainer {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) rgba(255,255,255,0.1);
+        }
+
+        #virtualScrollContainer::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #virtualScrollContainer::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+
+        #virtualScrollContainer::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        #virtualScrollContainer::-webkit-scrollbar-thumb:hover {
+            background: #1565c0;
+        }
+
+        /* Sticky table header */
+        #virtualScrollContainer table thead {
+            position: sticky;
+            top: 0;
+            background: var(--bg-color);
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Virtual scroll performance */
+        #virtualTableBody {
+            will-change: transform;
+            contain: layout style paint;
+        }
+
         th {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
@@ -651,6 +694,139 @@
             color: #8b9fea;
         }
 
+        /* ✅ Enhanced Dark Mode Contrast */
+        .dark-mode {
+            color: var(--text-dark);
+        }
+
+        .dark-mode .card {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+
+        .dark-mode strong {
+            color: #ffffff;
+        }
+
+        .dark-mode .link {
+            color: #58a6ff;
+        }
+
+        .dark-mode .link:hover {
+            color: #79c0ff;
+        }
+
+        .dark-mode .badge {
+            background: var(--hover-dark);
+            color: #f0f6fc;
+            border: 1px solid var(--border-dark);
+        }
+
+        .dark-mode .badge-reactions {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.3);
+        }
+
+        .dark-mode .badge-comments {
+            background: rgba(74, 144, 226, 0.2);
+            color: #4a90e2;
+            border-color: rgba(74, 144, 226, 0.3);
+        }
+
+        .dark-mode .badge-shares {
+            background: rgba(95, 195, 155, 0.2);
+            color: #5fc39b;
+            border-color: rgba(95, 195, 155, 0.3);
+        }
+
+        .dark-mode table {
+            border-color: var(--border-dark);
+        }
+
+        .dark-mode td,
+        .dark-mode th {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .dark-mode tr:hover {
+            background: var(--hover-dark) !important;
+        }
+
+        .dark-mode .form-control,
+        .dark-mode .form-select,
+        .dark-mode input,
+        .dark-mode select,
+        .dark-mode textarea {
+            background: var(--card-dark);
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+
+        .dark-mode .form-control:focus,
+        .dark-mode .form-select:focus,
+        .dark-mode input:focus,
+        .dark-mode select:focus {
+            background: var(--hover-dark);
+            border-color: var(--primary);
+        }
+
+        .dark-mode .btn {
+            background: var(--card-dark);
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+
+        .dark-mode .btn:hover {
+            background: var(--hover-dark);
+            border-color: var(--primary);
+        }
+
+        .dark-mode .btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .dark-mode .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .dark-mode .table-controls label {
+            color: var(--text-dark);
+        }
+
+        .dark-mode i.fas {
+            color: var(--text-dark);
+        }
+
+        .dark-mode i.fas.fa-clock {
+            color: var(--primary) !important;
+        }
+
+        .dark-mode i.fas.fa-map-marker-alt,
+        .dark-mode i.fas.fa-music {
+            color: var(--secondary) !important;
+        }
+
+        /* Better chart visibility in dark mode */
+        .dark-mode canvas {
+            filter: brightness(0.95) contrast(1.1);
+        }
+
+        /* Virtual scroll containers */
+        .dark-mode #virtualScrollContainer,
+        .dark-mode #virtualScrollCommentsContainer,
+        .dark-mode #virtualScrollAuthorsContainer {
+            scrollbar-color: var(--primary) var(--card-dark);
+        }
+
+        .dark-mode #virtualScrollContainer::-webkit-scrollbar-track,
+        .dark-mode #virtualScrollCommentsContainer::-webkit-scrollbar-track,
+        .dark-mode #virtualScrollAuthorsContainer::-webkit-scrollbar-track {
+            background: var(--card-dark);
+        }
+
         .hashtag-count {
             background: var(--primary);
             color: white;
@@ -815,6 +991,16 @@
             <div id="tab-comments" class="tab-content" style="display:none;">
                 <div class="table-controls">
                     <span id="commentsCount">Showing 0 comments</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label for="commentsPerPage">Show:</label>
+                        <select id="commentsPerPage" onchange="handleCommentsPerPageChange()" class="form-select">
+                            <option value="50">50 comments</option>
+                            <option value="100">100 comments</option>
+                            <option value="200">200 comments</option>
+                            <option value="500">500 comments</option>
+                            <option value="1000">1000 comments</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="comments">
                     <div class="loading">Loading comments...</div>
@@ -824,6 +1010,15 @@
             <div id="tab-authors" class="tab-content" style="display:none;">
                 <div class="table-controls">
                     <span id="authorsCount">Showing 0 authors</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label for="authorsPerPage">Show:</label>
+                        <select id="authorsPerPage" onchange="handleAuthorsPerPageChange()" class="form-select">
+                            <option value="20" selected>20 authors</option>
+                            <option value="50">50 authors</option>
+                            <option value="100">100 authors</option>
+                            <option value="200">200 authors</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="authors">
                     <div class="loading">Loading authors...</div>
@@ -1601,61 +1796,123 @@
             }
         }
 
-        function renderPosts(data) {
-            const postsHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date (WIB)</th>
-                            <th>Author</th>
-                            <th>Text</th>
-                            <th>Location</th>
-                            <th>Music</th>
-                            <th>Reactions</th>
-                            <th>Comments</th>
-                            <th>Shares</th>
-                            <th>Total Engagement</th>
-                            <th>Link</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(post => {
-                            const totalEngagement = (post.reactions || 0) + (post.comments || 0) + (post.shares || 0);
-                            // Use timestamp_iso (ISO format) instead of timestamp (string format)
-                            const timestamp = post.timestamp_iso ? new Date(post.timestamp_iso) : null;
-                            const wibDate = timestamp ? formatToWIB(timestamp) : 'N/A';
+        // ✅ Virtual Scrolling State
+        let virtualScrollState = {
+            rowHeight: 80,        // Average row height in pixels
+            bufferRows: 10,       // Extra rows to render above/below viewport
+            visibleStart: 0,
+            visibleEnd: 50,
+            containerHeight: 600, // Table container height
+            scrollTop: 0
+        };
 
-                            return `
+        function renderPosts(data) {
+            // Store data globally for virtual scrolling
+            window.postsData = data;
+
+            const container = document.getElementById('posts');
+
+            // Create virtual scroll container
+            const totalHeight = data.length * virtualScrollState.rowHeight;
+
+            container.innerHTML = `
+                <div style="height: ${virtualScrollState.containerHeight}px; overflow-y: auto; position: relative;" id="virtualScrollContainer">
+                    <table>
+                        <thead style="position: sticky; top: 0; background: var(--bg-color); z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <tr>
-                                <td style="white-space: nowrap;">
-                                    ${wibDate !== 'N/A' ? `<i class="fas fa-clock" style="color: var(--primary);"></i> ${wibDate}` : '<span style="color: #999;">-</span>'}
-                                </td>
-                                <td>
-                                    ${post.author ? `<a href="https://facebook.com/${post.author}" target="_blank" class="link external-link">${post.author} <i class="fas fa-external-link-alt"></i></a>` : 'Unknown'}
-                                </td>
-                                <td class="post-text">${post.text_preview || 'No text'}</td>
-                                <td>
-                                    ${post.location && post.location !== 'N/A' ? `<i class="fas fa-map-marker-alt"></i> ${post.location}` : '<span style="color: #999;">-</span>'}
-                                </td>
-                                <td>
-                                    ${post.music_title && post.music_title !== 'N/A' ? `<i class="fas fa-music"></i> <strong>${post.music_title}</strong><br><small style="color: #666;">${post.music_artist || ''}</small>` : '<span style="color: #999;">-</span>'}
-                                </td>
-                                <td><span class="badge badge-reactions">${post.reactions?.toLocaleString() || 0}</span></td>
-                                <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
-                                <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
-                                <td><strong style="color: var(--primary); font-size: 1.1em;">${totalEngagement.toLocaleString()}</strong></td>
-                                <td>
-                                    ${(post.share_url || post.post_url) ? `<a href="${post.share_url || post.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View Post</a>` : 'N/A'}
-                                </td>
+                                <th>Date (WIB)</th>
+                                <th>Author</th>
+                                <th>Text</th>
+                                <th>Location</th>
+                                <th>Music</th>
+                                <th>Reactions</th>
+                                <th>Comments</th>
+                                <th>Shares</th>
+                                <th>Total Engagement</th>
+                                <th>Link</th>
                             </tr>
-                        `;
-                        }).join('')}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody id="virtualTableBody">
+                            <!-- Rows rendered by virtual scroller -->
+                        </tbody>
+                    </table>
+                    <!-- Spacer to maintain scroll height -->
+                    <div style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 1px; pointer-events: none;"></div>
+                </div>
             `;
 
-            document.getElementById('posts').innerHTML = postsHTML;
+            // Initial render
+            updateVisibleRows();
+
+            // Add scroll listener with debounce
+            const scrollContainer = document.getElementById('virtualScrollContainer');
+            let scrollTimeout;
+            scrollContainer.addEventListener('scroll', () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    virtualScrollState.scrollTop = scrollContainer.scrollTop;
+                    updateVisibleRows();
+                }, 16); // ~60fps
+            });
+
             document.getElementById('postsCount').textContent = `Showing ${data.length} posts`;
+        }
+
+        function updateVisibleRows() {
+            const data = window.postsData || [];
+            if (data.length === 0) return;
+
+            const { rowHeight, bufferRows, containerHeight, scrollTop } = virtualScrollState;
+
+            // Calculate visible range
+            const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - bufferRows);
+            const endIndex = Math.min(
+                data.length,
+                Math.ceil((scrollTop + containerHeight) / rowHeight) + bufferRows
+            );
+
+            // Update state
+            virtualScrollState.visibleStart = startIndex;
+            virtualScrollState.visibleEnd = endIndex;
+
+            // Render only visible rows
+            const visibleData = data.slice(startIndex, endIndex);
+            const offsetY = startIndex * rowHeight;
+
+            const rowsHTML = visibleData.map(post => {
+                const totalEngagement = (post.reactions || 0) + (post.comments || 0) + (post.shares || 0);
+                const timestamp = post.timestamp_iso ? new Date(post.timestamp_iso) : null;
+                const wibDate = timestamp ? formatToWIB(timestamp) : 'N/A';
+
+                return `
+                <tr>
+                    <td style="white-space: nowrap;">
+                        ${wibDate !== 'N/A' ? `<i class="fas fa-clock" style="color: var(--primary);"></i> ${wibDate}` : '<span style="color: #999;">-</span>'}
+                    </td>
+                    <td>
+                        ${post.author ? `<a href="https://facebook.com/${post.author}" target="_blank" class="link external-link">${post.author} <i class="fas fa-external-link-alt"></i></a>` : 'Unknown'}
+                    </td>
+                    <td class="post-text">${post.text_preview || 'No text'}</td>
+                    <td>
+                        ${post.location && post.location !== 'N/A' ? `<i class="fas fa-map-marker-alt"></i> ${post.location}` : '<span style="color: #999;">-</span>'}
+                    </td>
+                    <td>
+                        ${post.music_title && post.music_title !== 'N/A' ? `<i class="fas fa-music"></i> <strong>${post.music_title}</strong><br><small style="color: #666;">${post.music_artist || ''}</small>` : '<span style="color: #999;">-</span>'}
+                    </td>
+                    <td><span class="badge badge-reactions">${post.reactions?.toLocaleString() || 0}</span></td>
+                    <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
+                    <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
+                    <td><strong style="color: var(--primary); font-size: 1.1em;">${totalEngagement.toLocaleString()}</strong></td>
+                    <td>
+                        ${(post.share_url || post.post_url) ? `<a href="${post.share_url || post.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View Post</a>` : 'N/A'}
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            const tbody = document.getElementById('virtualTableBody');
+            tbody.style.transform = `translateY(${offsetY}px)`;
+            tbody.innerHTML = rowsHTML;
         }
 
         // Format date to WIB (UTC+7)
@@ -1672,21 +1929,51 @@
             return new Intl.DateTimeFormat('id-ID', options).format(date);
         }
 
-        // Load comments
-        async function loadComments() {
+        // ✅ Comments Virtual Scrolling State
+        let virtualScrollCommentsState = {
+            rowHeight: 70,
+            bufferRows: 10,
+            visibleStart: 0,
+            visibleEnd: 50,
+            containerHeight: 600,
+            scrollTop: 0
+        };
+
+        // Dropdown handler for comments
+        async function handleCommentsPerPageChange() {
+            const limit = document.getElementById('commentsPerPage').value;
+            showToast(`Loading ${limit} comments...`);
+            await loadComments(parseInt(limit));
+        }
+
+        // Load comments with virtual scrolling
+        async function loadComments(limit = 50) {
             try {
-                const response = await apiFetch('/api/comments?limit=50');
+                const response = await apiFetch(`/api/comments?limit=${limit}`);
                 const data = await response.json();
                 allComments = data.data || [];
+                window.commentsData = allComments;
 
                 if (!allComments || allComments.length === 0) {
                     document.getElementById('comments').innerHTML = '<p>No comments found</p>';
                     return;
                 }
 
-                const commentsHTML = `
+                renderComments(allComments);
+            } catch (error) {
+                document.getElementById('comments').innerHTML = '<div class="error">Failed to load comments</div>';
+            }
+        }
+
+        function renderComments(data) {
+            window.commentsData = data;
+            const container = document.getElementById('comments');
+            const totalHeight = data.length * virtualScrollCommentsState.rowHeight;
+
+            container.innerHTML = `
+                <div style="height: ${virtualScrollCommentsState.containerHeight}px; overflow-y: auto; position: relative;" id="virtualScrollCommentsContainer">
                     <table>
-                        <thead>
+                        <thead style="position: sticky; top: 0; background: var(--bg-color); z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <tr>
                                 <th>Author</th>
                                 <th>Comment</th>
@@ -1695,44 +1982,105 @@
                                 <th>Post</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${allComments.map(comment => `
-                                <tr>
-                                    <td><strong>${comment.comment_author || 'Unknown'}</strong></td>
-                                    <td class="post-text">${comment.comment_text || 'No text'}</td>
-                                    <td><span class="badge badge-reactions">${comment.comment_reactions || 0}</span></td>
-                                    <td>${comment.post_author || 'Unknown'}</td>
-                                    <td>
-                                        ${comment.post_url ? `<a href="${comment.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View</a>` : 'N/A'}
-                                    </td>
-                                </tr>
-                            `).join('')}
+                        <tbody id="virtualCommentsTableBody">
+                            <!-- Rows rendered by virtual scroller -->
                         </tbody>
                     </table>
-                `;
+                    <div style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 1px; pointer-events: none;"></div>
+                </div>
+            `;
 
-                document.getElementById('comments').innerHTML = commentsHTML;
-                document.getElementById('commentsCount').textContent = `Showing ${allComments.length} comments`;
-            } catch (error) {
-                document.getElementById('comments').innerHTML = '<div class="error">Failed to load comments</div>';
-            }
+            updateVisibleCommentRows();
+
+            const scrollContainer = document.getElementById('virtualScrollCommentsContainer');
+            let scrollTimeout;
+            scrollContainer.addEventListener('scroll', () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    virtualScrollCommentsState.scrollTop = scrollContainer.scrollTop;
+                    updateVisibleCommentRows();
+                }, 16);
+            });
+
+            document.getElementById('commentsCount').textContent = `Showing ${data.length} comments`;
         }
 
-        // Load authors
-        async function loadAuthors() {
+        function updateVisibleCommentRows() {
+            const data = window.commentsData || [];
+            if (data.length === 0) return;
+
+            const { rowHeight, bufferRows, containerHeight, scrollTop } = virtualScrollCommentsState;
+            const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - bufferRows);
+            const endIndex = Math.min(data.length, Math.ceil((scrollTop + containerHeight) / rowHeight) + bufferRows);
+
+            virtualScrollCommentsState.visibleStart = startIndex;
+            virtualScrollCommentsState.visibleEnd = endIndex;
+
+            const visibleData = data.slice(startIndex, endIndex);
+            const offsetY = startIndex * rowHeight;
+
+            const rowsHTML = visibleData.map(comment => `
+                <tr>
+                    <td><strong>${comment.comment_author || 'Unknown'}</strong></td>
+                    <td class="post-text">${comment.comment_text || 'No text'}</td>
+                    <td><span class="badge badge-reactions">${comment.comment_reactions || 0}</span></td>
+                    <td>${comment.post_author || 'Unknown'}</td>
+                    <td>
+                        ${comment.post_url ? `<a href="${comment.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View</a>` : 'N/A'}
+                    </td>
+                </tr>
+            `).join('');
+
+            const tbody = document.getElementById('virtualCommentsTableBody');
+            tbody.style.transform = `translateY(${offsetY}px)`;
+            tbody.innerHTML = rowsHTML;
+        }
+
+        // ✅ Authors Virtual Scrolling State
+        let virtualScrollAuthorsState = {
+            rowHeight: 60,
+            bufferRows: 10,
+            visibleStart: 0,
+            visibleEnd: 50,
+            containerHeight: 600,
+            scrollTop: 0
+        };
+
+        // Dropdown handler for authors
+        async function handleAuthorsPerPageChange() {
+            const limit = document.getElementById('authorsPerPage').value;
+            showToast(`Loading ${limit} authors...`);
+            await loadAuthors(parseInt(limit));
+        }
+
+        // Load authors with virtual scrolling
+        async function loadAuthors(limit = 20) {
             try {
-                const response = await fetch(`${API_URL}/api/authors/top?limit=20`);
+                const response = await fetch(`${API_URL}/api/authors/top?limit=${limit}`);
                 const data = await response.json();
                 allAuthors = data;
+                window.authorsData = data;
 
                 if (data.length === 0) {
                     document.getElementById('authors').innerHTML = '<p>No authors found</p>';
                     return;
                 }
 
-                const authorsHTML = `
+                renderAuthors(data);
+            } catch (error) {
+                document.getElementById('authors').innerHTML = '<div class="error">Failed to load authors</div>';
+            }
+        }
+
+        function renderAuthors(data) {
+            window.authorsData = data;
+            const container = document.getElementById('authors');
+            const totalHeight = data.length * virtualScrollAuthorsState.rowHeight;
+
+            container.innerHTML = `
+                <div style="height: ${virtualScrollAuthorsState.containerHeight}px; overflow-y: auto; position: relative;" id="virtualScrollAuthorsContainer">
                     <table>
-                        <thead>
+                        <thead style="position: sticky; top: 0; background: var(--bg-color); z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <tr>
                                 <th>Author</th>
                                 <th>Total Posts</th>
@@ -1742,30 +2090,61 @@
                                 <th>Avg Reactions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${data.map(author => `
-                                <tr>
-                                    <td>
-                                        <a href="https://facebook.com/${author.author}" target="_blank" class="link external-link">
-                                            <strong>${author.author || 'Unknown'}</strong> <i class="fas fa-external-link-alt"></i>
-                                        </a>
-                                    </td>
-                                    <td>${author.total_posts?.toLocaleString() || 0}</td>
-                                    <td><span class="badge badge-reactions">${author.total_reactions?.toLocaleString() || 0}</span></td>
-                                    <td><span class="badge badge-comments">${author.total_comments?.toLocaleString() || 0}</span></td>
-                                    <td><span class="badge badge-shares">${author.total_shares?.toLocaleString() || 0}</span></td>
-                                    <td>${author.avg_reactions?.toLocaleString() || 0}</td>
-                                </tr>
-                            `).join('')}
+                        <tbody id="virtualAuthorsTableBody">
+                            <!-- Rows rendered by virtual scroller -->
                         </tbody>
                     </table>
-                `;
+                    <div style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 1px; pointer-events: none;"></div>
+                </div>
+            `;
 
-                document.getElementById('authors').innerHTML = authorsHTML;
-                document.getElementById('authorsCount').textContent = `Showing ${data.length} authors`;
-            } catch (error) {
-                document.getElementById('authors').innerHTML = '<div class="error">Failed to load authors</div>';
-            }
+            updateVisibleAuthorRows();
+
+            const scrollContainer = document.getElementById('virtualScrollAuthorsContainer');
+            let scrollTimeout;
+            scrollContainer.addEventListener('scroll', () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    virtualScrollAuthorsState.scrollTop = scrollContainer.scrollTop;
+                    updateVisibleAuthorRows();
+                }, 16);
+            });
+
+            document.getElementById('authorsCount').textContent = `Showing ${data.length} authors`;
+        }
+
+        function updateVisibleAuthorRows() {
+            const data = window.authorsData || [];
+            if (data.length === 0) return;
+
+            const { rowHeight, bufferRows, containerHeight, scrollTop } = virtualScrollAuthorsState;
+            const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - bufferRows);
+            const endIndex = Math.min(data.length, Math.ceil((scrollTop + containerHeight) / rowHeight) + bufferRows);
+
+            virtualScrollAuthorsState.visibleStart = startIndex;
+            virtualScrollAuthorsState.visibleEnd = endIndex;
+
+            const visibleData = data.slice(startIndex, endIndex);
+            const offsetY = startIndex * rowHeight;
+
+            const rowsHTML = visibleData.map(author => `
+                <tr>
+                    <td>
+                        <a href="https://facebook.com/${author.author}" target="_blank" class="link external-link">
+                            <strong>${author.author || 'Unknown'}</strong> <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </td>
+                    <td>${author.total_posts?.toLocaleString() || 0}</td>
+                    <td><span class="badge badge-reactions">${author.total_reactions?.toLocaleString() || 0}</span></td>
+                    <td><span class="badge badge-comments">${author.total_comments?.toLocaleString() || 0}</span></td>
+                    <td><span class="badge badge-shares">${author.total_shares?.toLocaleString() || 0}</span></td>
+                    <td>${Math.round(author.avg_reactions || 0).toLocaleString()}</td>
+                </tr>
+            `).join('');
+
+            const tbody = document.getElementById('virtualAuthorsTableBody');
+            tbody.style.transform = `translateY(${offsetY}px)`;
+            tbody.innerHTML = rowsHTML;
         }
 
         // Apply filters
