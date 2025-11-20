@@ -123,11 +123,24 @@ async function detectApiConnection() {
     // Get port from env or use default
     const apiPort = process.env.API_PORT || '3002';
 
+    // Get LAN IP from network interfaces
+    const networkInterfaces = os.networkInterfaces();
+    const lanIPs = [];
+    for (const name of Object.keys(networkInterfaces)) {
+        for (const net of networkInterfaces[name]) {
+            // Skip internal (loopback) and non-IPv4 addresses
+            if (!net.internal && net.family === 'IPv4') {
+                lanIPs.push(net.address);
+            }
+        }
+    }
+
     // Try multiple URL candidates in priority order
     const urlCandidates = [
+        process.env.API_BASE_URL,            // User-defined URL from .env (highest priority)
         `http://127.0.0.1:${apiPort}`,      // IPv4 localhost (most reliable)
         `http://localhost:${apiPort}`,       // System localhost (may use IPv6)
-        process.env.API_BASE_URL,            // User-defined URL from .env
+        ...lanIPs.map(ip => `http://${ip}:${apiPort}`), // LAN IPs (for Docker/remote access)
     ].filter(Boolean); // Remove undefined
 
     console.log('🔍 Detecting API connection...');
