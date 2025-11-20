@@ -31,14 +31,75 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             min-height: 100vh;
             padding: 20px;
             transition: all 0.3s ease;
+            position: relative;
+            overflow-x: hidden;
         }
 
-        body.dark-mode {
-            background: var(--bg-dark);
+        /* 🌊 Animated Wave Background with Gradient */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: linear-gradient(135deg,
+                #667eea 0%,
+                #764ba2 25%,
+                #f093fb 50%,
+                #4facfe 75%,
+                #00f2fe 100%
+            );
+            background-size: 400% 400%;
+            animation: gradientWave 15s ease infinite;
+        }
+
+        /* Floating bubble overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(120, 119, 198, 0.3) 0%, transparent 50%);
+            animation: floatBubbles 20s ease-in-out infinite;
+        }
+
+        @keyframes gradientWave {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes floatBubbles {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        body.dark-mode::before {
+            background: linear-gradient(135deg,
+                #1a1a2e 0%,
+                #16213e 25%,
+                #0f3460 50%,
+                #533483 75%,
+                #1a1a2e 100%
+            );
+        }
+
+        body.dark-mode::after {
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.15) 0%, transparent 50%);
         }
 
         .container {
@@ -46,11 +107,15 @@
             margin: 0 auto;
         }
 
+        /* 🔮 Glass Morphism Cards */
         header {
-            background: var(--card-light);
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
             display: flex;
             justify-content: space-between;
@@ -60,27 +125,33 @@
         }
 
         .dark-mode header {
-            background: var(--card-dark);
+            background: rgba(30, 30, 30, 0.4);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-dark);
         }
 
         .header-left h1 {
-            color: var(--text-light);
+            color: #ffffff;
             font-size: 2.5em;
             margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            font-weight: 700;
         }
 
         .dark-mode .header-left h1 {
-            color: var(--text-dark);
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
         }
 
         .subtitle {
-            color: #666;
+            color: rgba(255, 255, 255, 0.9);
             font-size: 1.1em;
+            font-weight: 400;
         }
 
         .dark-mode .subtitle {
-            color: #aaa;
+            color: rgba(255, 255, 255, 0.8);
         }
 
         .header-right {
@@ -121,11 +192,15 @@
             color: #eee;
         }
 
+        /* 🔮 Glass Morphism Filters */
         .filters-section {
-            background: var(--card-light);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px) saturate(180%);
+            -webkit-backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -137,7 +212,9 @@
         }
 
         .dark-mode .filters-section {
-            background: var(--card-dark);
+            background: rgba(30, 30, 30, 0.3);
+            backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .search-wrapper {
@@ -221,11 +298,12 @@
 
         .filter-group label {
             font-weight: 600;
-            color: var(--text-light);
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
         .dark-mode .filter-group label {
-            color: var(--text-dark);
+            color: rgba(255, 255, 255, 0.85);
         }
 
         .filter-group input,
@@ -243,36 +321,17 @@
             border-color: #444;
         }
 
-        /* ✨ CREATIVE ANIMATIONS - Falling, Typing, Glow Effects */
+        /* ✨ PROFESSIONAL ANIMATIONS - Smooth, Elegant, Glass Morphism */
 
-        /* 1. Falling Animation (cards drop from top) */
-        @keyframes fallIn {
-            0% {
-                opacity: 0;
-                transform: translateY(-100px) rotateX(-90deg);
-            }
-            50% {
-                transform: translateY(10px) rotateX(0deg);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) rotateX(0deg);
-            }
-        }
-
-        /* 2. Pulse Glow (for numbers) */
+        /* Subtle Pulse Glow (for numbers) */
         @keyframes pulseGlow {
             0%, 100% {
-                text-shadow: 0 0 10px rgba(102, 126, 234, 0.5),
-                             0 0 20px rgba(102, 126, 234, 0.3),
-                             0 0 30px rgba(102, 126, 234, 0.1);
-                transform: scale(1);
+                text-shadow: 0 2px 15px rgba(102, 126, 234, 0.5),
+                             0 4px 25px rgba(102, 126, 234, 0.3);
             }
             50% {
-                text-shadow: 0 0 20px rgba(102, 126, 234, 0.8),
-                             0 0 30px rgba(102, 126, 234, 0.6),
-                             0 0 40px rgba(102, 126, 234, 0.4);
-                transform: scale(1.05);
+                text-shadow: 0 2px 20px rgba(102, 126, 234, 0.7),
+                             0 4px 30px rgba(102, 126, 234, 0.5);
             }
         }
 
@@ -346,34 +405,36 @@
             margin-bottom: 30px;
         }
 
+        /* ✨ Glass Morphism Stat Cards */
         .stat-card {
-            background: var(--card-light);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px) saturate(180%);
+            -webkit-backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             text-align: center;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
             position: relative;
             overflow: hidden;
 
-            /* ✨ Falling animation with stagger */
-            animation: fallIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-
-            /* Glow effect on hover */
+            /* ✅ Smooth fade-in instead of falling */
+            animation: fadeInUp 0.6s ease-out both;
             will-change: transform, box-shadow;
         }
 
-        /* Staggered delay for each card */
+        /* Staggered delay for smooth appearance */
         .stat-card:nth-child(1) { animation-delay: 0.1s; }
-        .stat-card:nth-child(2) { animation-delay: 0.2s; }
-        .stat-card:nth-child(3) { animation-delay: 0.3s; }
-        .stat-card:nth-child(4) { animation-delay: 0.4s; }
-        .stat-card:nth-child(5) { animation-delay: 0.5s; }
-        .stat-card:nth-child(6) { animation-delay: 0.6s; }
-        .stat-card:nth-child(7) { animation-delay: 0.7s; }
-        .stat-card:nth-child(8) { animation-delay: 0.8s; }
+        .stat-card:nth-child(2) { animation-delay: 0.15s; }
+        .stat-card:nth-child(3) { animation-delay: 0.2s; }
+        .stat-card:nth-child(4) { animation-delay: 0.25s; }
+        .stat-card:nth-child(5) { animation-delay: 0.3s; }
+        .stat-card:nth-child(6) { animation-delay: 0.35s; }
+        .stat-card:nth-child(7) { animation-delay: 0.4s; }
+        .stat-card:nth-child(8) { animation-delay: 0.45s; }
 
-        /* Shimmer background effect */
+        /* Subtle shimmer effect */
         .stat-card::before {
             content: '';
             position: absolute;
@@ -384,37 +445,41 @@
             background: linear-gradient(
                 90deg,
                 transparent,
-                rgba(255, 255, 255, 0.1),
+                rgba(255, 255, 255, 0.2),
                 transparent
             );
-            animation: shimmer 3s infinite;
+            animation: shimmer 4s infinite;
             pointer-events: none;
         }
 
         .dark-mode .stat-card {
-            background: var(--card-dark);
+            background: rgba(30, 30, 30, 0.3);
+            backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .stat-card:hover {
-            transform: translateY(-10px) scale(1.03);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
-            /* Gentle float animation on hover */
-            animation: float 2s ease-in-out infinite;
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .dark-mode .stat-card:hover {
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+            border-color: rgba(102, 126, 234, 0.5);
         }
 
         .stat-value {
             font-size: 2.5em;
             font-weight: bold;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ffffff;
             margin-bottom: 10px;
             position: relative;
             display: inline-block;
+            text-shadow: 0 2px 15px rgba(102, 126, 234, 0.5);
 
-            /* ✨ Pulsing glow effect for numbers */
-            animation: pulseGlow 2s ease-in-out infinite;
+            /* ✨ Subtle pulsing glow effect */
+            animation: pulseGlow 3s ease-in-out infinite;
         }
 
         /* Typing cursor effect */
@@ -425,14 +490,15 @@
         }
 
         .stat-label {
-            color: #666;
+            color: rgba(255, 255, 255, 0.85);
             font-size: 1em;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-weight: 500;
         }
 
         .dark-mode .stat-label {
-            color: #aaa;
+            color: rgba(255, 255, 255, 0.75);
         }
 
         .charts-grid {
@@ -442,31 +508,42 @@
             margin-bottom: 30px;
         }
 
+        /* 🔮 Glass Morphism Chart Cards */
         .chart-card {
-            background: var(--card-light);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px) saturate(180%);
+            -webkit-backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 
-            /* ✨ Slide in from left animation */
-            animation: slideInLeft 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-            transition: all 0.3s ease;
+            /* ✅ Smooth fade-in animation */
+            animation: fadeInUp 0.6s ease-out both;
+            transition: all 0.4s ease;
         }
 
-        /* Staggered delay for each chart */
-        .chart-card:nth-child(1) { animation-delay: 0.2s; }
-        .chart-card:nth-child(2) { animation-delay: 0.4s; }
-        .chart-card:nth-child(3) { animation-delay: 0.6s; }
+        /* Staggered delay for smooth appearance */
+        .chart-card:nth-child(1) { animation-delay: 0.5s; }
+        .chart-card:nth-child(2) { animation-delay: 0.6s; }
+        .chart-card:nth-child(3) { animation-delay: 0.7s; }
         .chart-card:nth-child(4) { animation-delay: 0.8s; }
 
         /* Hover effect for charts */
         .chart-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.25);
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+            border-color: rgba(255, 255, 255, 0.6);
         }
 
         .dark-mode .chart-card {
-            background: var(--card-dark);
+            background: rgba(30, 30, 30, 0.3);
+            backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .dark-mode .chart-card:hover {
+            border-color: rgba(102, 126, 234, 0.5);
         }
 
         .chart-card.full-width {
@@ -474,14 +551,17 @@
         }
 
         .chart-card h2 {
-            color: var(--text-light);
+            color: #ffffff;
             margin-bottom: 20px;
             padding-bottom: 10px;
-            border-bottom: 3px solid var(--primary);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         .dark-mode .chart-card h2 {
-            color: var(--text-dark);
+            color: #ffffff;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.4);
+            text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
         }
 
         .chart-container {
@@ -493,25 +573,34 @@
             height: 300px;
         }
 
+        /* 🔮 Glass Morphism Content Sections */
         .content-section {
-            background: var(--card-light);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px) saturate(180%);
+            -webkit-backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
         }
 
         .dark-mode .content-section {
-            background: var(--card-dark);
+            background: rgba(30, 30, 30, 0.3);
+            backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         h2 {
-            color: var(--text-light);
+            color: #ffffff;
             margin-bottom: 20px;
+            font-weight: 600;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         .dark-mode h2 {
-            color: var(--text-dark);
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
         }
 
         .table-controls {
