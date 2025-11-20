@@ -19,17 +19,18 @@ const CONFIG = {
     // Query
     query_variations: ["prabowo subianto", "anies baswedan", "jokowi", "politik indonesia"],
     
-    // ✅ HISTORICAL - Komprehensif tapi manageable
-    max_posts_historical: 1000,  // ⬇️ dari 1000 → 200 per query (800 total per year)
-    
+    // ✅ HISTORICAL - Target total ~1000 posts untuk SEMUA query + 3 tahun
+    // Formula: 85 posts/year × 3 years × 4 queries = ~1020 total posts
+    max_posts_historical: 85,  // 85 posts per year (balanced across all queries)
+
     // ✅ RECENT - Sustainable untuk 24/7
-    max_posts_recent: 200,       // ⬇️ dari 1000 → 50 per query (200 total per cycle)
-    
-    // ✅ TIMING - Lebih aman dari rate limit
-    JEDA_SCROLL_DETIK: 8,       // ⬆️ dari 5 → 8 detik (less aggressive)
-    JEDA_ANTAR_QUERY_MENIT: 5,  // ⬆️ dari 3 → 5 menit (more breathing room)
-    JEDA_ANTAR_SIKLUS_MENIT: 30, // ⬆️ dari 15 → 30 menit (sustainable)
-    JEDA_UPDATE_MENIT: 30,      // ⬆️ dari 15 → 30 menit (match cycle time)
+    max_posts_recent: 200,       // 200 posts per query untuk recent mode
+
+    // ✅ TIMING - Balanced speed & safety
+    JEDA_SCROLL_DETIK: 5,       // 5 detik per scroll (faster than 8s)
+    JEDA_ANTAR_QUERY_MENIT: 3,  // 3 menit antar query (reasonable)
+    JEDA_ANTAR_SIKLUS_MENIT: 30, // 30 menit antar siklus
+    JEDA_UPDATE_MENIT: 30,      // 30 menit untuk update engagement
     
     // ✅ UPDATE - Lebih banyak sekaligus
     UPDATE_BATCH_SIZE: 40,      // ⬆️ dari 20 → 40 (more efficient)
@@ -63,7 +64,7 @@ const CONFIG = {
     SKIP_HISTORICAL: false,
     CUTOFF_DATE: '2023-05-01',
     FIRST_RUN_FILE: 'first_run_done.flag',
-    MAX_SAME_POSTS_SCROLL: 3,
+    MAX_SAME_POSTS_SCROLL: 6,  // Increase from 3 to 6 (less likely to get stuck on duplicates)
     
     // ✅ NEW: ERROR HANDLING & RETRY
     MAX_RETRIES: 3,              // Retry 3x jika error
