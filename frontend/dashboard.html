@@ -2018,9 +2018,6 @@
 
             const container = document.getElementById('posts');
 
-            // Create virtual scroll container
-            const totalHeight = data.length * virtualScrollState.rowHeight;
-
             container.innerHTML = `
                 <div style="height: ${virtualScrollState.containerHeight}px; overflow-y: auto; position: relative;" id="virtualScrollContainer">
                     <table>
@@ -2042,8 +2039,6 @@
                             <!-- Rows rendered by virtual scroller -->
                         </tbody>
                     </table>
-                    <!-- Spacer to maintain scroll height -->
-                    <div style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 1px; pointer-events: none;"></div>
                 </div>
             `;
 
@@ -2083,9 +2078,20 @@
 
             // Render only visible rows
             const visibleData = data.slice(startIndex, endIndex);
-            const offsetY = startIndex * rowHeight;
 
-            const rowsHTML = visibleData.map(post => {
+            // ✅ FIX: Use spacer rows instead of transform to prevent data disappearing
+            const topSpacerHeight = startIndex * rowHeight;
+            const bottomSpacerHeight = (data.length - endIndex) * rowHeight;
+
+            let rowsHTML = '';
+
+            // Top spacer
+            if (topSpacerHeight > 0) {
+                rowsHTML += `<tr><td colspan="10" style="height: ${topSpacerHeight}px; padding: 0; border: none;"></td></tr>`;
+            }
+
+            // Visible rows
+            rowsHTML += visibleData.map(post => {
                 const totalEngagement = (post.reactions || 0) + (post.comments || 0) + (post.shares || 0);
                 const timestamp = post.timestamp_iso ? new Date(post.timestamp_iso) : null;
                 const wibDate = timestamp ? formatToWIB(timestamp) : 'N/A';
@@ -2116,8 +2122,12 @@
                 `;
             }).join('');
 
+            // Bottom spacer
+            if (bottomSpacerHeight > 0) {
+                rowsHTML += `<tr><td colspan="10" style="height: ${bottomSpacerHeight}px; padding: 0; border: none;"></td></tr>`;
+            }
+
             const tbody = document.getElementById('virtualTableBody');
-            tbody.style.transform = `translateY(${offsetY}px)`;
             tbody.innerHTML = rowsHTML;
         }
 
@@ -2174,7 +2184,6 @@
         function renderComments(data) {
             window.commentsData = data;
             const container = document.getElementById('comments');
-            const totalHeight = data.length * virtualScrollCommentsState.rowHeight;
 
             container.innerHTML = `
                 <div style="height: ${virtualScrollCommentsState.containerHeight}px; overflow-y: auto; position: relative;" id="virtualScrollCommentsContainer">
@@ -2192,7 +2201,6 @@
                             <!-- Rows rendered by virtual scroller -->
                         </tbody>
                     </table>
-                    <div style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 1px; pointer-events: none;"></div>
                 </div>
             `;
 
@@ -2223,9 +2231,20 @@
             virtualScrollCommentsState.visibleEnd = endIndex;
 
             const visibleData = data.slice(startIndex, endIndex);
-            const offsetY = startIndex * rowHeight;
 
-            const rowsHTML = visibleData.map(comment => `
+            // ✅ FIX: Use spacer rows instead of transform to prevent data disappearing
+            const topSpacerHeight = startIndex * rowHeight;
+            const bottomSpacerHeight = (data.length - endIndex) * rowHeight;
+
+            let rowsHTML = '';
+
+            // Top spacer
+            if (topSpacerHeight > 0) {
+                rowsHTML += `<tr><td colspan="5" style="height: ${topSpacerHeight}px; padding: 0; border: none;"></td></tr>`;
+            }
+
+            // Visible rows
+            rowsHTML += visibleData.map(comment => `
                 <tr>
                     <td><strong>${comment.comment_author || 'Unknown'}</strong></td>
                     <td class="post-text">${comment.comment_text || 'No text'}</td>
@@ -2237,8 +2256,12 @@
                 </tr>
             `).join('');
 
+            // Bottom spacer
+            if (bottomSpacerHeight > 0) {
+                rowsHTML += `<tr><td colspan="5" style="height: ${bottomSpacerHeight}px; padding: 0; border: none;"></td></tr>`;
+            }
+
             const tbody = document.getElementById('virtualCommentsTableBody');
-            tbody.style.transform = `translateY(${offsetY}px)`;
             tbody.innerHTML = rowsHTML;
         }
 
@@ -2281,7 +2304,6 @@
         function renderAuthors(data) {
             window.authorsData = data;
             const container = document.getElementById('authors');
-            const totalHeight = data.length * virtualScrollAuthorsState.rowHeight;
 
             container.innerHTML = `
                 <div style="height: ${virtualScrollAuthorsState.containerHeight}px; overflow-y: auto; position: relative;" id="virtualScrollAuthorsContainer">
@@ -2300,7 +2322,6 @@
                             <!-- Rows rendered by virtual scroller -->
                         </tbody>
                     </table>
-                    <div style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 1px; pointer-events: none;"></div>
                 </div>
             `;
 
@@ -2331,9 +2352,20 @@
             virtualScrollAuthorsState.visibleEnd = endIndex;
 
             const visibleData = data.slice(startIndex, endIndex);
-            const offsetY = startIndex * rowHeight;
 
-            const rowsHTML = visibleData.map(author => `
+            // ✅ FIX: Use spacer rows instead of transform to prevent data disappearing
+            const topSpacerHeight = startIndex * rowHeight;
+            const bottomSpacerHeight = (data.length - endIndex) * rowHeight;
+
+            let rowsHTML = '';
+
+            // Top spacer
+            if (topSpacerHeight > 0) {
+                rowsHTML += `<tr><td colspan="6" style="height: ${topSpacerHeight}px; padding: 0; border: none;"></td></tr>`;
+            }
+
+            // Visible rows
+            rowsHTML += visibleData.map(author => `
                 <tr>
                     <td>
                         <a href="https://facebook.com/${author.author}" target="_blank" class="link external-link">
@@ -2348,8 +2380,12 @@
                 </tr>
             `).join('');
 
+            // Bottom spacer
+            if (bottomSpacerHeight > 0) {
+                rowsHTML += `<tr><td colspan="6" style="height: ${bottomSpacerHeight}px; padding: 0; border: none;"></td></tr>`;
+            }
+
             const tbody = document.getElementById('virtualAuthorsTableBody');
-            tbody.style.transform = `translateY(${offsetY}px)`;
             tbody.innerHTML = rowsHTML;
         }
 
