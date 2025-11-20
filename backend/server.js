@@ -711,6 +711,206 @@ app.get('/api/posts/views', async (req, res) => {
 });
 
 // ========================================
+// INSTAGRAM ENDPOINTS
+// ========================================
+
+// Get Instagram overall statistics
+app.get('/api/instagram/stats', async (req, res) => {
+    try {
+        const statsQuery = `
+            SELECT
+                COUNT(*) as total_posts,
+                COUNT(DISTINCT author) as unique_authors,
+                COUNT(DISTINCT query_used) as unique_hashtags,
+                SUM(likes) as total_likes,
+                SUM(comments) as total_comments_count,
+                SUM(views) as total_views,
+                ROUND(AVG(likes), 2) as avg_likes,
+                ROUND(AVG(comments), 2) as avg_comments
+            FROM instagram_posts
+        `;
+
+        const commentsQuery = `
+            SELECT COUNT(*) as extracted_comments
+            FROM instagram_comments
+        `;
+
+        const [statsResult, commentsResult] = await Promise.all([
+            pool.query(statsQuery),
+            pool.query(commentsQuery)
+        ]);
+
+        const stats = statsResult.rows[0];
+        stats.extracted_comments = parseInt(commentsResult.rows[0].extracted_comments);
+        stats.total_posts = parseInt(stats.total_posts);
+        stats.unique_authors = parseInt(stats.unique_authors);
+        stats.unique_hashtags = parseInt(stats.unique_hashtags);
+        stats.total_likes = parseInt(stats.total_likes) || 0;
+        stats.total_comments_count = parseInt(stats.total_comments_count) || 0;
+        stats.total_views = parseInt(stats.total_views) || 0;
+
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Instagram posts with pagination
+app.get('/api/instagram/posts', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = parseInt(req.query.offset) || 0;
+
+        const result = await pool.query(`
+            SELECT
+                id, author, author_followers,
+                SUBSTRING(content_text, 1, 200) as text_preview,
+                likes, comments, views,
+                post_url, image_url, video_url,
+                query_used as hashtag,
+                timestamp_iso, timestamp_wib,
+                location_short as location,
+                audio_source,
+                update_count
+            FROM instagram_posts
+            ORDER BY timestamp DESC
+            LIMIT $1 OFFSET $2
+        `, [limit, offset]);
+
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Instagram top hashtags
+app.get('/api/instagram/hashtags/top', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+
+        const result = await pool.query(`
+            SELECT
+                query_used as hashtag,
+                COUNT(*) as post_count,
+                SUM(likes) as total_likes,
+                SUM(comments) as total_comments,
+                SUM(views) as total_views,
+                ROUND(AVG(likes), 2) as avg_likes
+            FROM instagram_posts
+            WHERE query_used IS NOT NULL
+            GROUP BY query_used
+            ORDER BY post_count DESC, total_likes DESC
+            LIMIT $1
+        `, [limit]);
+
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Instagram top authors
+app.get('/api/instagram/authors/top', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 20;
+
+        const result = await pool.query(`
+            SELECT
+                author,
+                author_profile_link,
+                MAX(author_followers) as followers,
+                COUNT(*) as total_posts,
+                SUM(likes) as total_likes,
+                SUM(comments) as total_comments,
+                SUM(views) as total_views,
+                ROUND(AVG(likes), 2) as avg_likes
+            FROM instagram_posts
+            WHERE author IS NOT NULL
+            GROUP BY author, author_profile_link
+            ORDER BY total_likes DESC
+            LIMIT $1
+        `, [limit]);
+
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Instagram comments with pagination
+app.get('/api/instagram/comments', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = parseInt(req.query.offset) || 0;
+
+        const result = await pool.query(`
+            SELECT
+                id, post_url, post_author,
+                comment_author, comment_author_link,
+                comment_text, comment_likes,
+                comment_timestamp, comment_timestamp_wib,
+                is_reply, parent_comment_author
+            FROM instagram_comments
+            ORDER BY comment_timestamp DESC
+            LIMIT $1 OFFSET $2
+        `, [limit, offset]);
+
+        res.json({ data: result.rows });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Instagram daily trends
+app.get('/api/instagram/trends/daily', async (req, res) => {
+    try {
+        const days = parseInt(req.query.days) || 30;
+
+        const result = await pool.query(`
+            SELECT
+                DATE(timestamp_iso) as date,
+                COUNT(*) as posts,
+                SUM(likes) as total_likes,
+                SUM(comments) as total_comments,
+                SUM(views) as total_views
+            FROM instagram_posts
+            WHERE timestamp_iso >= NOW() - INTERVAL '${days} days'
+            GROUP BY DATE(timestamp_iso)
+            ORDER BY date DESC
+        `);
+
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Instagram top posts by engagement
+app.get('/api/instagram/posts/top/engagement', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+
+        const result = await pool.query(`
+            SELECT
+                id, author, author_followers,
+                SUBSTRING(content_text, 1, 150) as text_preview,
+                likes, comments, views,
+                (likes + comments * 2 + views * 0.1) as engagement_score,
+                post_url, image_url,
+                query_used as hashtag,
+                timestamp_wib
+            FROM instagram_posts
+            ORDER BY engagement_score DESC
+            LIMIT $1
+        `, [limit]);
+
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========================================
 // ERROR HANDLING
 // ========================================
 
@@ -737,6 +937,8 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('');
     console.log('📊 Available endpoints:');
+    console.log('');
+    console.log('   📘 FACEBOOK:');
     console.log('   GET    /api/stats              - Overall statistics');
     console.log('   GET    /api/stats/daily        - Daily statistics');
     console.log('   GET    /api/posts              - All posts (paginated)');
@@ -749,6 +951,17 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('   GET    /api/authors/top        - Top authors');
     console.log('   GET    /api/analytics/trends   - Engagement trends');
     console.log('   GET    /api/analytics/wordcloud - Word cloud data (hashtags & keywords)');
+    console.log('');
+    console.log('   📷 INSTAGRAM:');
+    console.log('   GET    /api/instagram/stats    - Instagram statistics');
+    console.log('   GET    /api/instagram/posts    - Instagram posts (paginated)');
+    console.log('   GET    /api/instagram/posts/top/engagement - Top Instagram posts');
+    console.log('   GET    /api/instagram/comments - Instagram comments (paginated)');
+    console.log('   GET    /api/instagram/hashtags/top - Top hashtags');
+    console.log('   GET    /api/instagram/authors/top - Top Instagram authors');
+    console.log('   GET    /api/instagram/trends/daily - Instagram daily trends');
+    console.log('');
+    console.log('   🔧 SYSTEM:');
     console.log('   POST   /api/import             - Trigger data import (CSV/JSON)');
     console.log('   DELETE /api/cleanup/sample     - Delete sample/test data');
     console.log('   DELETE /api/cleanup/all        - Delete ALL data (fresh start)');
