@@ -524,9 +524,32 @@ app.post('/api/comments/save', async (req, res) => {
 
         for (const comment of comments) {
             try {
-                // Check if comment exists
-                const existingQuery = 'SELECT id FROM comments WHERE comment_id = $1 AND post_url = $2';
-                const existing = await pool.query(existingQuery, [comment.comment_id, comment.post_url]);
+                // ✅ FIXED: Better duplicate detection
+                // If comment_id is "N/A" (HTML extraction), use fingerprint instead
+                let existingQuery, queryParams;
+
+                if (comment.comment_id && comment.comment_id !== 'N/A') {
+                    // GraphQL comments: Check by comment_id + post_url
+                    existingQuery = 'SELECT id FROM comments WHERE comment_id = $1 AND post_url = $2';
+                    queryParams = [comment.comment_id, comment.post_url];
+                } else {
+                    // HTML comments: Check by fingerprint (author + text + timestamp + post_url)
+                    existingQuery = `
+                        SELECT id FROM comments
+                        WHERE post_url = $1
+                        AND comment_author = $2
+                        AND comment_text = $3
+                        AND comment_timestamp = $4
+                    `;
+                    queryParams = [
+                        comment.post_url,
+                        comment.comment_author,
+                        comment.comment_text,
+                        comment.comment_timestamp
+                    ];
+                }
+
+                const existing = await pool.query(existingQuery, queryParams);
 
                 if (existing.rows.length === 0) {
                     // Insert new comment
