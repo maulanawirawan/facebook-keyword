@@ -904,6 +904,145 @@ app.get('/api/instagram/trends/daily', async (req, res) => {
     }
 });
 
+// Save Instagram post (real-time auto-save from scraper)
+app.post('/api/instagram/posts/save', async (req, res) => {
+    try {
+        const post = req.body;
+
+        // Calculate engagement score
+        const engagementScore = (post.likes || 0) + (post.comments || 0) * 2 + (post.views || 0) * 0.01;
+
+        // Upsert post
+        const result = await pool.query(`
+            INSERT INTO instagram_posts (
+                author, author_profile_link, author_followers,
+                location, location_short, location_lat, location_lng,
+                location_city, location_address, audio_source,
+                timestamp, timestamp_iso, timestamp_wib,
+                post_url, content_text, image_url, video_url, image_source,
+                likes, comments, views, shares,
+                hashtags, keywords, keywords_list, hashtags_list,
+                engagement_score, query_used, scraped_at, scraped_at_wib,
+                update_count, _previous_likes, _previous_comments, _previous_views
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, $17, $18,
+                $19, $20, $21, $22, $23, $24, $25, $26,
+                $27, $28, $29, $30, $31, $32, $33, $34
+            )
+            ON CONFLICT (post_url) DO UPDATE SET
+                likes = EXCLUDED.likes,
+                comments = EXCLUDED.comments,
+                views = EXCLUDED.views,
+                engagement_score = EXCLUDED.engagement_score,
+                update_count = instagram_posts.update_count + 1,
+                _previous_likes = instagram_posts.likes,
+                _previous_comments = instagram_posts.comments,
+                _previous_views = instagram_posts.views,
+                updated_at = CURRENT_TIMESTAMP
+            RETURNING id, (xmax = 0) AS inserted
+        `, [
+            post.author || null,
+            post.author_profile_link || null,
+            post.author_followers || 0,
+            post.location || null,
+            post.location_short || null,
+            post.location_lat || null,
+            post.location_lng || null,
+            post.location_city || null,
+            post.location_address || null,
+            post.audio_source || null,
+            post.timestamp || null,
+            post.timestamp_iso || null,
+            post.timestamp_wib || null,
+            post.post_url,
+            post.content_text || null,
+            post.image_url || null,
+            post.video_url || null,
+            post.image_source || null,
+            post.likes || 0,
+            post.comments || 0,
+            post.views || 0,
+            post.shares || 'N/A',
+            post.hashtags || null,
+            post.keywords || null,
+            post.keywords_list || null,
+            post.hashtags_list || null,
+            engagementScore,
+            post.query_used || null,
+            post.scraped_at || null,
+            post.scraped_at_wib || null,
+            post.update_count || 0,
+            post._previous_likes || 0,
+            post._previous_comments || 0,
+            post._previous_views || 0
+        ]);
+
+        const action = result.rows[0].inserted ? 'inserted' : 'updated';
+        res.json({
+            success: true,
+            action,
+            id: result.rows[0].id,
+            post_url: post.post_url
+        });
+    } catch (error) {
+        console.error('Error saving Instagram post:', error);
+        res.status(500).json({ error: 'Failed to save post', details: error.message });
+    }
+});
+
+// Save Instagram comments (real-time auto-save from scraper)
+app.post('/api/instagram/comments/save', async (req, res) => {
+    try {
+        const comments = Array.isArray(req.body) ? req.body : [req.body];
+        let insertedCount = 0;
+        let updatedCount = 0;
+
+        for (const comment of comments) {
+            const isReply = comment.parent_comment_pk !== null && comment.parent_comment_pk !== undefined;
+
+            const result = await pool.query(`
+                INSERT INTO instagram_comments (
+                    post_url, post_pk, comment_pk, comment_author,
+                    comment_text, comment_likes, comment_timestamp_unix,
+                    child_comment_count, parent_comment_pk, is_reply
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                ON CONFLICT (comment_pk) DO UPDATE SET
+                    comment_likes = EXCLUDED.comment_likes,
+                    updated_at = CURRENT_TIMESTAMP
+                RETURNING (xmax = 0) AS inserted
+            `, [
+                comment.post_url || null,
+                comment.post_pk || null,
+                comment.comment_pk,
+                comment.comment_author || null,
+                comment.comment_text || null,
+                comment.comment_likes || 0,
+                comment.comment_timestamp_unix || null,
+                comment.child_comment_count || 0,
+                comment.parent_comment_pk || null,
+                isReply
+            ]);
+
+            if (result.rows[0].inserted) {
+                insertedCount++;
+            } else {
+                updatedCount++;
+            }
+        }
+
+        res.json({
+            success: true,
+            inserted: insertedCount,
+            updated: updatedCount,
+            total: comments.length
+        });
+    } catch (error) {
+        console.error('Error saving Instagram comments:', error);
+        res.status(500).json({ error: 'Failed to save comments', details: error.message });
+    }
+});
+
 // ========================================
 // ERROR HANDLING
 // ========================================
@@ -953,7 +1092,9 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('   GET    /api/instagram/stats    - Overall Instagram statistics');
     console.log('   GET    /api/instagram/posts    - All Instagram posts (paginated)');
     console.log('   GET    /api/instagram/posts/top/engagement - Top Instagram posts');
+    console.log('   POST   /api/instagram/posts/save - Save Instagram post (real-time auto-save)');
     console.log('   GET    /api/instagram/comments - Instagram comments (paginated)');
+    console.log('   POST   /api/instagram/comments/save - Save Instagram comments (real-time auto-save)');
     console.log('   GET    /api/instagram/hashtags/top - Top Instagram hashtags');
     console.log('   GET    /api/instagram/authors/top - Top Instagram authors');
     console.log('   GET    /api/instagram/trends/daily - Instagram daily trends');
