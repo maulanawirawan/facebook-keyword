@@ -365,6 +365,47 @@
             margin-top: 20px;
         }
 
+        /* ✅ Virtual Scroll Container */
+        #virtualScrollContainer {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) rgba(255,255,255,0.1);
+        }
+
+        #virtualScrollContainer::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #virtualScrollContainer::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+
+        #virtualScrollContainer::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        #virtualScrollContainer::-webkit-scrollbar-thumb:hover {
+            background: #1565c0;
+        }
+
+        /* Sticky table header */
+        #virtualScrollContainer table thead {
+            position: sticky;
+            top: 0;
+            background: var(--bg-color);
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Virtual scroll performance */
+        #virtualTableBody {
+            will-change: transform;
+            contain: layout style paint;
+        }
+
         th {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
@@ -1601,61 +1642,123 @@
             }
         }
 
-        function renderPosts(data) {
-            const postsHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date (WIB)</th>
-                            <th>Author</th>
-                            <th>Text</th>
-                            <th>Location</th>
-                            <th>Music</th>
-                            <th>Reactions</th>
-                            <th>Comments</th>
-                            <th>Shares</th>
-                            <th>Total Engagement</th>
-                            <th>Link</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(post => {
-                            const totalEngagement = (post.reactions || 0) + (post.comments || 0) + (post.shares || 0);
-                            // Use timestamp_iso (ISO format) instead of timestamp (string format)
-                            const timestamp = post.timestamp_iso ? new Date(post.timestamp_iso) : null;
-                            const wibDate = timestamp ? formatToWIB(timestamp) : 'N/A';
+        // ✅ Virtual Scrolling State
+        let virtualScrollState = {
+            rowHeight: 80,        // Average row height in pixels
+            bufferRows: 10,       // Extra rows to render above/below viewport
+            visibleStart: 0,
+            visibleEnd: 50,
+            containerHeight: 600, // Table container height
+            scrollTop: 0
+        };
 
-                            return `
+        function renderPosts(data) {
+            // Store data globally for virtual scrolling
+            window.postsData = data;
+
+            const container = document.getElementById('posts');
+
+            // Create virtual scroll container
+            const totalHeight = data.length * virtualScrollState.rowHeight;
+
+            container.innerHTML = `
+                <div style="height: ${virtualScrollState.containerHeight}px; overflow-y: auto; position: relative;" id="virtualScrollContainer">
+                    <table>
+                        <thead style="position: sticky; top: 0; background: var(--bg-color); z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <tr>
-                                <td style="white-space: nowrap;">
-                                    ${wibDate !== 'N/A' ? `<i class="fas fa-clock" style="color: var(--primary);"></i> ${wibDate}` : '<span style="color: #999;">-</span>'}
-                                </td>
-                                <td>
-                                    ${post.author ? `<a href="https://facebook.com/${post.author}" target="_blank" class="link external-link">${post.author} <i class="fas fa-external-link-alt"></i></a>` : 'Unknown'}
-                                </td>
-                                <td class="post-text">${post.text_preview || 'No text'}</td>
-                                <td>
-                                    ${post.location && post.location !== 'N/A' ? `<i class="fas fa-map-marker-alt"></i> ${post.location}` : '<span style="color: #999;">-</span>'}
-                                </td>
-                                <td>
-                                    ${post.music_title && post.music_title !== 'N/A' ? `<i class="fas fa-music"></i> <strong>${post.music_title}</strong><br><small style="color: #666;">${post.music_artist || ''}</small>` : '<span style="color: #999;">-</span>'}
-                                </td>
-                                <td><span class="badge badge-reactions">${post.reactions?.toLocaleString() || 0}</span></td>
-                                <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
-                                <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
-                                <td><strong style="color: var(--primary); font-size: 1.1em;">${totalEngagement.toLocaleString()}</strong></td>
-                                <td>
-                                    ${(post.share_url || post.post_url) ? `<a href="${post.share_url || post.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View Post</a>` : 'N/A'}
-                                </td>
+                                <th>Date (WIB)</th>
+                                <th>Author</th>
+                                <th>Text</th>
+                                <th>Location</th>
+                                <th>Music</th>
+                                <th>Reactions</th>
+                                <th>Comments</th>
+                                <th>Shares</th>
+                                <th>Total Engagement</th>
+                                <th>Link</th>
                             </tr>
-                        `;
-                        }).join('')}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody id="virtualTableBody">
+                            <!-- Rows rendered by virtual scroller -->
+                        </tbody>
+                    </table>
+                    <!-- Spacer to maintain scroll height -->
+                    <div style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 1px; pointer-events: none;"></div>
+                </div>
             `;
 
-            document.getElementById('posts').innerHTML = postsHTML;
+            // Initial render
+            updateVisibleRows();
+
+            // Add scroll listener with debounce
+            const scrollContainer = document.getElementById('virtualScrollContainer');
+            let scrollTimeout;
+            scrollContainer.addEventListener('scroll', () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    virtualScrollState.scrollTop = scrollContainer.scrollTop;
+                    updateVisibleRows();
+                }, 16); // ~60fps
+            });
+
             document.getElementById('postsCount').textContent = `Showing ${data.length} posts`;
+        }
+
+        function updateVisibleRows() {
+            const data = window.postsData || [];
+            if (data.length === 0) return;
+
+            const { rowHeight, bufferRows, containerHeight, scrollTop } = virtualScrollState;
+
+            // Calculate visible range
+            const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - bufferRows);
+            const endIndex = Math.min(
+                data.length,
+                Math.ceil((scrollTop + containerHeight) / rowHeight) + bufferRows
+            );
+
+            // Update state
+            virtualScrollState.visibleStart = startIndex;
+            virtualScrollState.visibleEnd = endIndex;
+
+            // Render only visible rows
+            const visibleData = data.slice(startIndex, endIndex);
+            const offsetY = startIndex * rowHeight;
+
+            const rowsHTML = visibleData.map(post => {
+                const totalEngagement = (post.reactions || 0) + (post.comments || 0) + (post.shares || 0);
+                const timestamp = post.timestamp_iso ? new Date(post.timestamp_iso) : null;
+                const wibDate = timestamp ? formatToWIB(timestamp) : 'N/A';
+
+                return `
+                <tr>
+                    <td style="white-space: nowrap;">
+                        ${wibDate !== 'N/A' ? `<i class="fas fa-clock" style="color: var(--primary);"></i> ${wibDate}` : '<span style="color: #999;">-</span>'}
+                    </td>
+                    <td>
+                        ${post.author ? `<a href="https://facebook.com/${post.author}" target="_blank" class="link external-link">${post.author} <i class="fas fa-external-link-alt"></i></a>` : 'Unknown'}
+                    </td>
+                    <td class="post-text">${post.text_preview || 'No text'}</td>
+                    <td>
+                        ${post.location && post.location !== 'N/A' ? `<i class="fas fa-map-marker-alt"></i> ${post.location}` : '<span style="color: #999;">-</span>'}
+                    </td>
+                    <td>
+                        ${post.music_title && post.music_title !== 'N/A' ? `<i class="fas fa-music"></i> <strong>${post.music_title}</strong><br><small style="color: #666;">${post.music_artist || ''}</small>` : '<span style="color: #999;">-</span>'}
+                    </td>
+                    <td><span class="badge badge-reactions">${post.reactions?.toLocaleString() || 0}</span></td>
+                    <td><span class="badge badge-comments">${post.comments?.toLocaleString() || 0}</span></td>
+                    <td><span class="badge badge-shares">${post.shares?.toLocaleString() || 0}</span></td>
+                    <td><strong style="color: var(--primary); font-size: 1.1em;">${totalEngagement.toLocaleString()}</strong></td>
+                    <td>
+                        ${(post.share_url || post.post_url) ? `<a href="${post.share_url || post.post_url}" target="_blank" class="link external-link"><i class="fas fa-link"></i> View Post</a>` : 'N/A'}
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            const tbody = document.getElementById('virtualTableBody');
+            tbody.style.transform = `translateY(${offsetY}px)`;
+            tbody.innerHTML = rowsHTML;
         }
 
         // Format date to WIB (UTC+7)
