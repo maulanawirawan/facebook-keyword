@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Analytics Dashboard</title>
+    <title>Social Media Analytics Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
@@ -1062,14 +1062,58 @@
             margin-top: 5px;
             transition: width 0.5s ease;
         }
+
+        /* Platform Switcher */
+        .platform-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0 20px;
+            padding: 0 20px;
+        }
+
+        .platform-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .platform-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .platform-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .dark-mode .platform-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .dark-mode .platform-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-left">
-                <h1>📊 Facebook Analytics Dashboard</h1>
-                <p class="subtitle">Real-time social media analytics and reporting</p>
+                <h1>📊 Social Media Analytics Dashboard</h1>
+                <p class="subtitle">Real-time analytics for Facebook & Instagram</p>
                 <p class="subtitle" style="margin-top: 8px;">
                     <span id="refreshStatus" style="display: inline-flex; align-items: center; gap: 5px;">
                         <i class="fas fa-circle" style="color: #22c55e; font-size: 8px; animation: pulse 2s infinite;"></i>
@@ -1088,6 +1132,18 @@
             </div>
         </header>
 
+        <!-- Platform Switcher -->
+        <div class="platform-switcher">
+            <button class="platform-btn active" onclick="switchPlatform('facebook')">
+                <i class="fab fa-facebook"></i> Facebook
+            </button>
+            <button class="platform-btn" onclick="switchPlatform('instagram')">
+                <i class="fab fa-instagram"></i> Instagram
+            </button>
+        </div>
+
+        <!-- Facebook Content -->
+        <div id="facebook-content">
         <!-- Filters Section -->
         <div class="filters-section">
             <div class="filter-group">
@@ -1244,6 +1300,81 @@
                 </div>
             </div>
         </div>
+        </div>
+        <!-- End Facebook Content -->
+
+        <!-- Instagram Content -->
+        <div id="instagram-content" style="display: none;">
+            <!-- Instagram Statistics Cards -->
+            <div class="stats-grid" id="instagram-stats">
+                <div class="loading">Loading Instagram statistics...</div>
+            </div>
+
+            <!-- Instagram Charts Section -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h2><i class="fas fa-hashtag"></i> Top Hashtags</h2>
+                    <div class="chart-container">
+                        <canvas id="instagramHashtagsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h2><i class="fas fa-user"></i> Top Authors</h2>
+                    <div class="chart-container">
+                        <canvas id="instagramAuthorsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-card full-width">
+                <h2><i class="fas fa-chart-line"></i> Daily Trend</h2>
+                <div class="chart-container">
+                    <canvas id="instagramTrendsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Instagram Data Tables -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h2><i class="fas fa-table"></i> Instagram Data</h2>
+                    <div class="table-tabs">
+                        <button class="tab-btn active" onclick="showInstagramTab('posts')">
+                            <i class="fas fa-images"></i> Posts
+                        </button>
+                        <button class="tab-btn" onclick="showInstagramTab('comments')">
+                            <i class="fas fa-comments"></i> Comments
+                        </button>
+                        <button class="tab-btn" onclick="showInstagramTab('authors')">
+                            <i class="fas fa-users"></i> Authors
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-controls">
+                    <select id="instagramPerPage" onchange="changeInstagramPerPage()">
+                        <option value="25">25 per page</option>
+                        <option value="50" selected>50 per page</option>
+                        <option value="100">100 per page</option>
+                        <option value="200">200 per page</option>
+                    </select>
+                </div>
+
+                <div class="table-content">
+                    <div id="instagram-posts" class="table-tab active">
+                        <div class="loading">Loading Instagram posts...</div>
+                    </div>
+                    <div id="instagram-comments" class="table-tab">
+                        <div class="loading">Loading Instagram comments...</div>
+                    </div>
+                    <div id="instagram-authors" class="table-tab">
+                        <div class="loading">Loading Instagram authors...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End Instagram Content -->
+
     </div>
 
     <div class="api-status">
@@ -2605,6 +2736,409 @@
 
         // Start when page loads
         window.addEventListener('DOMContentLoaded', init);
+
+        // ========================================
+        // INSTAGRAM FUNCTIONS
+        // ========================================
+
+        let currentPlatform = 'facebook';
+        let instagramCharts = {};
+        let instagramData = {
+            posts: [],
+            comments: [],
+            authors: []
+        };
+
+        // Switch between Facebook and Instagram
+        function switchPlatform(platform) {
+            currentPlatform = platform;
+
+            // Update button states
+            const buttons = document.querySelectorAll('.platform-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(platform)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Show/hide content
+            const facebookContent = document.getElementById('facebook-content');
+            const instagramContent = document.getElementById('instagram-content');
+
+            if (platform === 'facebook') {
+                facebookContent.style.display = 'block';
+                instagramContent.style.display = 'none';
+            } else {
+                facebookContent.style.display = 'none';
+                instagramContent.style.display = 'block';
+                // Load Instagram data if not loaded yet
+                if (instagramData.posts.length === 0) {
+                    loadInstagramData();
+                }
+            }
+        }
+
+        // Load all Instagram data
+        async function loadInstagramData() {
+            try {
+                await Promise.all([
+                    loadInstagramStats(),
+                    loadInstagramHashtags(),
+                    loadInstagramAuthors(),
+                    loadInstagramTrends(),
+                    loadInstagramPosts(),
+                    loadInstagramComments()
+                ]);
+            } catch (error) {
+                console.error('Error loading Instagram data:', error);
+                showToast('Failed to load Instagram data', 'error');
+            }
+        }
+
+        // Load Instagram statistics
+        async function loadInstagramStats() {
+            try {
+                const response = await apiFetch('/api/instagram/stats');
+                const stats = await response.json();
+
+                const statsHtml = `
+                    <div class="stat-card">
+                        <i class="fas fa-images"></i>
+                        <h3>Total Posts</h3>
+                        <p class="stat-value">${parseInt(stats.total_posts || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-user"></i>
+                        <h3>Authors</h3>
+                        <p class="stat-value">${parseInt(stats.unique_authors || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-hashtag"></i>
+                        <h3>Hashtags</h3>
+                        <p class="stat-value">${parseInt(stats.unique_hashtags || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-heart"></i>
+                        <h3>Total Likes</h3>
+                        <p class="stat-value">${parseInt(stats.total_likes || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-comment"></i>
+                        <h3>Total Comments</h3>
+                        <p class="stat-value">${parseInt(stats.total_comments_count || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-eye"></i>
+                        <h3>Total Views</h3>
+                        <p class="stat-value">${parseInt(stats.total_views || 0).toLocaleString()}</p>
+                    </div>
+                `;
+
+                document.getElementById('instagram-stats').innerHTML = statsHtml;
+            } catch (error) {
+                console.error('Error loading Instagram stats:', error);
+                document.getElementById('instagram-stats').innerHTML = '<div class="error">Failed to load statistics</div>';
+            }
+        }
+
+        // Load Instagram hashtags chart
+        async function loadInstagramHashtags() {
+            try {
+                const response = await apiFetch('/api/instagram/hashtags/top?limit=10');
+                const hashtags = await response.json();
+
+                const ctx = document.getElementById('instagramHashtagsChart');
+                if (instagramCharts.hashtags) {
+                    instagramCharts.hashtags.destroy();
+                }
+
+                instagramCharts.hashtags = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: hashtags.map(h => h.hashtag || 'Unknown'),
+                        datasets: [{
+                            label: 'Posts',
+                            data: hashtags.map(h => h.post_count),
+                            backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading Instagram hashtags:', error);
+            }
+        }
+
+        // Load Instagram authors chart
+        async function loadInstagramAuthors() {
+            try {
+                const response = await apiFetch('/api/instagram/authors/top?limit=10');
+                const authors = await response.json();
+                instagramData.authors = authors;
+
+                const ctx = document.getElementById('instagramAuthorsChart');
+                if (instagramCharts.authors) {
+                    instagramCharts.authors.destroy();
+                }
+
+                instagramCharts.authors = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: authors.map(a => a.author || 'Unknown'),
+                        datasets: [{
+                            label: 'Posts',
+                            data: authors.map(a => a.post_count),
+                            backgroundColor: 'rgba(126, 34, 206, 0.6)',
+                            borderColor: 'rgba(126, 34, 206, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+
+                // Render authors table
+                renderInstagramAuthorsTable(authors);
+            } catch (error) {
+                console.error('Error loading Instagram authors:', error);
+            }
+        }
+
+        // Load Instagram trends chart
+        async function loadInstagramTrends() {
+            try {
+                const response = await apiFetch('/api/instagram/trends/daily');
+                const trends = await response.json();
+
+                const ctx = document.getElementById('instagramTrendsChart');
+                if (instagramCharts.trends) {
+                    instagramCharts.trends.destroy();
+                }
+
+                instagramCharts.trends = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: trends.map(t => t.date).reverse(),
+                        datasets: [
+                            {
+                                label: 'Posts',
+                                data: trends.map(t => t.post_count).reverse(),
+                                borderColor: 'rgba(102, 126, 234, 1)',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Likes',
+                                data: trends.map(t => t.total_likes).reverse(),
+                                borderColor: 'rgba(126, 34, 206, 1)',
+                                backgroundColor: 'rgba(126, 34, 206, 0.1)',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: true, position: 'top' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading Instagram trends:', error);
+            }
+        }
+
+        // Load Instagram posts
+        async function loadInstagramPosts() {
+            try {
+                const response = await apiFetch('/api/instagram/posts?limit=50');
+                const data = await response.json();
+                instagramData.posts = data.posts || [];
+
+                renderInstagramPostsTable(instagramData.posts);
+            } catch (error) {
+                console.error('Error loading Instagram posts:', error);
+                document.getElementById('instagram-posts').innerHTML = '<div class="error">Failed to load posts</div>';
+            }
+        }
+
+        // Load Instagram comments
+        async function loadInstagramComments() {
+            try {
+                const response = await apiFetch('/api/instagram/comments?limit=50');
+                const data = await response.json();
+                instagramData.comments = data.comments || [];
+
+                renderInstagramCommentsTable(instagramData.comments);
+            } catch (error) {
+                console.error('Error loading Instagram comments:', error);
+                document.getElementById('instagram-comments').innerHTML = '<div class="error">Failed to load comments</div>';
+            }
+        }
+
+        // Render Instagram posts table
+        function renderInstagramPostsTable(posts) {
+            if (!posts || posts.length === 0) {
+                document.getElementById('instagram-posts').innerHTML = '<div class="empty">No Instagram posts found</div>';
+                return;
+            }
+
+            const html = `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Author</th>
+                                <th>Post</th>
+                                <th>Likes</th>
+                                <th>Comments</th>
+                                <th>Views</th>
+                                <th>Hashtag</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${posts.map(post => `
+                                <tr>
+                                    <td><a href="${post.author_profile_link || '#'}" target="_blank">${post.author || 'Unknown'}</a></td>
+                                    <td><a href="${post.post_url}" target="_blank">View Post</a></td>
+                                    <td>${(post.likes || 0).toLocaleString()}</td>
+                                    <td>${(post.comments || 0).toLocaleString()}</td>
+                                    <td>${(post.views || 0).toLocaleString()}</td>
+                                    <td>${post.query_used || '-'}</td>
+                                    <td>${post.timestamp_iso ? new Date(post.timestamp_iso).toLocaleDateString() : '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('instagram-posts').innerHTML = html;
+        }
+
+        // Render Instagram comments table
+        function renderInstagramCommentsTable(comments) {
+            if (!comments || comments.length === 0) {
+                document.getElementById('instagram-comments').innerHTML = '<div class="empty">No Instagram comments found</div>';
+                return;
+            }
+
+            const html = `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Author</th>
+                                <th>Comment</th>
+                                <th>Likes</th>
+                                <th>Is Reply</th>
+                                <th>Post</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${comments.map(comment => `
+                                <tr>
+                                    <td>${comment.comment_author || 'Unknown'}</td>
+                                    <td>${(comment.comment_text || '').substring(0, 100)}${comment.comment_text && comment.comment_text.length > 100 ? '...' : ''}</td>
+                                    <td>${(comment.comment_likes || 0).toLocaleString()}</td>
+                                    <td>${comment.is_reply ? '✓' : '-'}</td>
+                                    <td><a href="${comment.post_url || '#'}" target="_blank">View</a></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('instagram-comments').innerHTML = html;
+        }
+
+        // Render Instagram authors table
+        function renderInstagramAuthorsTable(authors) {
+            if (!authors || authors.length === 0) {
+                document.getElementById('instagram-authors').innerHTML = '<div class="empty">No Instagram authors found</div>';
+                return;
+            }
+
+            const html = `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Author</th>
+                                <th>Followers</th>
+                                <th>Posts</th>
+                                <th>Total Likes</th>
+                                <th>Total Comments</th>
+                                <th>Avg Engagement</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${authors.map(author => `
+                                <tr>
+                                    <td><a href="${author.author_profile_link || '#'}" target="_blank">${author.author || 'Unknown'}</a></td>
+                                    <td>${(author.followers || 0).toLocaleString()}</td>
+                                    <td>${(author.post_count || 0).toLocaleString()}</td>
+                                    <td>${(author.total_likes || 0).toLocaleString()}</td>
+                                    <td>${(author.total_comments || 0).toLocaleString()}</td>
+                                    <td>${(author.avg_engagement || 0).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('instagram-authors').innerHTML = html;
+        }
+
+        // Show Instagram tab
+        function showInstagramTab(tab) {
+            // Update tab buttons
+            const tabButtons = document.querySelectorAll('#instagram-content .tab-btn');
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Show selected tab
+            document.getElementById('instagram-posts').classList.remove('active');
+            document.getElementById('instagram-comments').classList.remove('active');
+            document.getElementById('instagram-authors').classList.remove('active');
+
+            document.getElementById(`instagram-${tab}`).classList.add('active');
+        }
+
+        // Change Instagram per page
+        function changeInstagramPerPage() {
+            const perPage = document.getElementById('instagramPerPage').value;
+            // Reload data with new limit
+            loadInstagramPosts();
+            loadInstagramComments();
+        }
     </script>
 </body>
 </html>
